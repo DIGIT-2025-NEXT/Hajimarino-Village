@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
 import PaymentMethodSelection from './PaymentMethodSelection';
 
 interface LoginFormProps {
@@ -17,42 +18,117 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
+  const [tempUserData, setTempUserData] = useState<{ email: string; username: string } | null>(null);
+
+  const { signIn, signUp, updateUserProfile } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    if (currentMode === 'register') {
-      // 新規登録時は決済方法選択画面に遷移
-      setTimeout(() => {
-        setIsLoading(false);
-        setShowPaymentSelection(true);
-      }, 1000);
-    } else {
-      // ログイン処理
-      console.log('ログイン処理');
-      setTimeout(() => {
-        setIsLoading(false);
-        onLoginSuccess();
-      }, 1000);
+    try {
+      if (currentMode === 'register') {
+        // 新規登録を直接実行
+        const { error } = await signUp(email, password, username);
+        if (error) {
+          setError(`登録に失敗しました: ${error.message}`);
+        } else {
+          // 登録成功後、決済方法選択画面に遷移
+          setTempUserData({ email, username });
+          setShowPaymentSelection(true);
+        }
+      } else {
+        // ログイン処理
+        const { error } = await signIn(email, password);
+        if (error) {
+          setError(`ログインに失敗しました: ${error.message}`);
+        } else {
+          onLoginSuccess();
+        }
+      }
+    } catch (err) {
+      setError('予期しないエラーが発生しました。');
+      console.error('認証エラー:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handlePaymentSelectionComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
-    // 決済方法選択完了後の処理
-    console.log('登録完了:', userData);
+  const handlePaymentSelectionComplete = async (userData: { email: string; username: string; selectedMethods: string[] }) => {
+    if (!tempUserData) return;
     
-    // 新規登録完了時のコールバックを呼び出し
-    onRegistrationComplete(userData);
+    setIsLoading(true);
+    
+    try {
+      // 決済方法選択後にSupabaseに登録
+      const { error } = await signUp(tempUserData.email, password, tempUserData.username);
+      
+      if (error) {
+        setError('登録に失敗しました。メールアドレスが既に使用されている可能性があります。');
+        setShowPaymentSelection(false);
+        setIsLoading(false);
+        return;
+      }
+      
+      // 登録成功後、認証セッションが確立されるまで待機
+      console.log('新規登録が完了しました。決済方法を保存中...');
+      
+      // 認証セッションの確立を待つ（最大10秒）
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (attempts < maxAttempts) {
+        try {
+          const { error: updateError } = await updateUserProfile({
+            selectedMethods: userData.selectedMethods
+          });
+          
+          if (!updateError) {
+            console.log('決済方法の保存に成功しました');
+            break;
+          }
+          
+          // エラーの場合は1秒待ってからリトライ
+          console.log(`決済方法の保存を試行中... (${attempts + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        } catch (err) {
+          console.log(`決済方法の保存を試行中... (${attempts + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        }
+      }
+      
+      if (attempts >= maxAttempts) {
+        console.log('決済方法の保存に失敗しました。設定画面で再設定してください。');
+      }
+      
+      onRegistrationComplete({
+        email: tempUserData.email,
+        username: tempUserData.username,
+        selectedMethods: userData.selectedMethods
+      });
+    } catch (err) {
+      setError('予期しないエラーが発生しました。');
+      setShowPaymentSelection(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (showPaymentSelection) {
+  if (showPaymentSelection && tempUserData) {
     return (
       <PaymentMethodSelection
-        onBack={() => setShowPaymentSelection(false)}
+        onBack={() => {
+          setShowPaymentSelection(false);
+          setTempUserData(null);
+        }}
         onComplete={handlePaymentSelectionComplete}
         onRegistrationComplete={handlePaymentSelectionComplete}
+        userData={tempUserData}
       />
     );
   }
@@ -131,6 +207,7 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              minLength={6}
             />
             <button
               type="button"
@@ -140,6 +217,12 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"

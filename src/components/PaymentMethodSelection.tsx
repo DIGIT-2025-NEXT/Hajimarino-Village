@@ -105,9 +105,10 @@ interface PaymentMethodSelectionProps {
   onBack: () => void;
   onComplete: (userData: { email: string; username: string; selectedMethods: string[]}) => void;
   onRegistrationComplete: (userData: { email: string; username: string; selectedMethods: string[]}) => void;
+  userData?: { email: string; username: string }; // 追加
 }
 
-export default function PaymentMethodSelection({ onBack, onRegistrationComplete }: PaymentMethodSelectionProps) {
+export default function PaymentMethodSelection({ onBack, onComplete, onRegistrationComplete, userData }: PaymentMethodSelectionProps) {
   const [selectedMethods, setSelectedMethods] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -119,9 +120,12 @@ export default function PaymentMethodSelection({ onBack, onRegistrationComplete 
 
     setIsLoading(true);
 
-    setTimeout (() => {
+    // userDataが提供されている場合はそれを使用、そうでなければ空の値を使用
+    const userDataToPass = userData || { email: '', username: '' };
+    
+    setTimeout(() => {
       setIsLoading(false);
-      onRegistrationComplete({ email: '', username: '', selectedMethods });
+      onRegistrationComplete({ ...userDataToPass, selectedMethods });
     }, 1000);
   };
 

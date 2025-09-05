@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { TitleScreen } from '@/components/Kaishi';
 import LoginForm from '@/components/LoginForm';
 import PaymentMethodSelection from '@/components/PaymentMethodSelection';
@@ -9,9 +10,32 @@ import Map from '@/components/map/Map';
 type AppState = 'title' | 'login' | 'payment' | 'map';
 
 export default function Home() {
+  const { user, loading } = useAuthContext();
   const [appState, setAppState] = useState<AppState>('title');
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [userData, setUserData] = useState<{ email: string; username: string; selectedMethods: string[] } | null>(null);
+  const [showPaymentSelection, setShowPaymentSelection] = useState(false);
+
+  //ローディング中
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // ユーザーがログイン済みの場合は地図画面を表示
+  if (user) {
+    return (
+      <main className="h-screen">
+        <Map userData={{
+        email: user.email || '',
+        username: user.user_metadata.username || '',
+        selectedMethods: user.user_metadata?.selectedMethods || []
+       }} /> 
+      </main>
+    );
+  }
 
   const handleLoginStart = () => {
     setAppState('login');
@@ -22,18 +46,18 @@ export default function Home() {
   };
 
   const handleLoginSuccess = () => {
-    setAppState('map');
+    // Supabase認証が成功すると自動的にuserが設定されるので、何もしない
+    console.log('ログイン成功');
   };
 
   const handleRegistrationComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
     console.log('新規登録完了:', userData);
-    setUserData(userData);
-    setAppState('map');
+    setShowPaymentSelection(false);
+    // Supabase認証が成功すると自動的にuserが設定される
   };
 
   const handlePaymentComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
     console.log('決済方法選択完了:', userData);
-    setUserData(userData);
     setAppState('map');
   };
 
@@ -41,10 +65,7 @@ export default function Home() {
     setAppState('title');
   };
 
-  const handleBackToLogin = () => {
-    setAppState('login');
-  };
-
+  
   // 開始画面
   if (appState === 'title') {
     return (
