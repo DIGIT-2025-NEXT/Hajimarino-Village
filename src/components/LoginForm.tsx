@@ -63,7 +63,7 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
         {/* ヘッダー */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            決済方法マップ
+            PayMapKitaQ
           </h1>
           <p className="text-gray-600">
             北九州市の店舗で使える決済方法を確認
