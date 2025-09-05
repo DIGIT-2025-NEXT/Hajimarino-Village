@@ -40,6 +40,8 @@ export default function Map({ children, userData }: MapProps) {
   const mapRef = useRef<google.maps.Map | undefined>(undefined); // 初期値をundefinedに設定
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [search, setSearch] = useState('');
 
   // サンプルデータの読み込み
   useEffect(() => {
@@ -150,6 +152,24 @@ export default function Map({ children, userData }: MapProps) {
           店舗数: {stores.length}件
         </span>
       </div>
+      {/* 検索バー*/}
+      {showSearch && (
+      <input
+        type="text"
+        placeholder="検索"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="absolute top-15 left-4 w-90 pl-10 pr-4 py-3 border border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100"
+        />
+      )}
+
+      {/* 戻るボタン */}
+      <button
+        onClick={() => window.location.href = "/"}
+        className="absolute top-4 left-30 bg-white px-3 py-2 rounded-lg shadow-lg"
+      >
+        戻る
+      </button>
 
        {/* 店舗詳細モーダル */}
        <StoreDetailModal 
