@@ -5,6 +5,19 @@ import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Store } from '@/types/store';
 import { SAMPLE_STORES } from '@/data/sampleStores';
 import StoreDetailModal from './StoreDetailModal';
+import { 
+  ArrowLeft, 
+  Search, 
+  Filter, 
+  MapPin, 
+  Store as StoreIcon, 
+  User, 
+  Settings,
+  Heart,
+  Star,
+  Navigation,
+  Layers
+} from 'lucide-react';
 
 // 北九州市の中心座標（小倉駅周辺）
 const CENTER = {
@@ -29,7 +42,7 @@ const MAP_OPTIONS = {
 interface MapProps {
   children?: React.ReactNode;
   userData?: { email: string; username: string; selectedMethods: string[] } | null;
-  onBackToTitle?: () => void; // 追加
+  onBackToTitle?: () => void;
 }
 
 export default function Map({ children, userData, onBackToTitle }: MapProps) {
@@ -38,16 +51,19 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
   });
 
-  const mapRef = useRef<google.maps.Map | undefined>(undefined); // 初期値をundefinedに設定
+  const mapRef = useRef<google.maps.Map | undefined>(undefined);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [search, setSearch] = useState('');
-  
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
+
   // サンプルデータの読み込み
   useEffect(() => {
     setStores(SAMPLE_STORES);
   }, []);
- 
+
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
@@ -59,7 +75,22 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   const handleMarkerClick = (store: Store) => {
     setSelectedStore(store);
   };
-  
+
+  const toggleFavorite = (storeId: string) => {
+    setFavoriteStores(prev => 
+      prev.includes(storeId)
+        ? prev.filter(id => id !== storeId)
+        : [...prev, storeId]
+    );
+  };
+
+  const filteredStores = stores.filter(store => {
+    const matchesSearch = store.name.toLowerCase().includes(search.toLowerCase()) ||
+                         store.address.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || store.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   if (loadError) {
     return (
       <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
@@ -87,7 +118,8 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   }
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative overflow-hidden">
+      {/* 地図 */}
       <GoogleMap
         mapContainerClassName="w-full h-full rounded-lg"
         center={CENTER}
@@ -96,9 +128,8 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
-       
-       {/* 店舗ピンの表示 */}
-       {stores.map((store) => (
+        {/* 店舗ピンの表示 */}
+        {filteredStores.map((store) => (
           <Marker
             key={store.id}
             position={{ lat: store.lat, lng: store.lng }}
@@ -106,88 +137,140 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
             onClick={() => handleMarkerClick(store)}
             icon={{
               url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="16" fill="#3B82F6" opacity="0.8"/>
-                  <circle cx="16" cy="16" r="8" fill="white"/>
-                  <text x="16" y="20" text-anchor="middle" font-size="12" fill="#3B82F6" font-weight="bold">店</text>
+                <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="20" r="20" fill="#3B82F6" opacity="0.9"/>
+                  <circle cx="20" cy="20" r="12" fill="white"/>
+                  <text x="20" y="25" text-anchor="middle" font-size="12" fill="#3B82F6" font-weight="bold">店</text>
                 </svg>
               `),
-              scaledSize: new google.maps.Size(32, 32)
+              scaledSize: new google.maps.Size(40, 40)
             }}
           />
         ))}
       </GoogleMap>
 
-      {/* 店舗情報の表示（デバッグ用） */}
-      {selectedStore && (
-        <div className="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-lg max-w-sm">
-          <h3 className="font-semibold text-lg mb-2">{selectedStore.name}</h3>
-          <p className="text-sm text-gray-600 mb-2">{selectedStore.address}</p>
-          <p className="text-sm text-gray-600 mb-2">カテゴリ: {selectedStore.category}</p>
-          <p className="text-sm text-gray-600 mb-2">信頼度: {selectedStore.trustScore}</p>
-          <div className="text-sm">
-            <p className="font-medium mb-1">対応決済方法:</p>
-            <div className="flex flex-wrap gap-1">
-              {selectedStore.paymentMethods
-                .filter(pm => pm.isSupported)
-                .map(pm => (
-                  <span key={pm.id} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                    {pm.name}
-                  </span>
-                ))}
-            </div>
+      {/* 上部UI */}
+      <div className="absolute top-4 left-4 right-4 z-10">
+        <div className="flex flex-col space-y-3">
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between">
+            {/* 戻るボタン */}
+            <button
+              onClick={() => {
+                if (onBackToTitle) {
+                  onBackToTitle();
+                } else {
+                  window.location.reload();
+                }
+              }}
+              className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm text-gray-700 rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">戻る</span>
+            </button>
+
+            {/* ユーザー情報 */}
+            {userData && (
+              <div className="flex items-center space-x-3 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{userData.username}</p>
+                  <p className="text-xs text-gray-500">{userData.selectedMethods.length}個の決済方法</p>
+                </div>
+              </div>
+            )}
           </div>
-          <button
-            onClick={() => setSelectedStore(null)}
-            className="mt-3 px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
-          >
-            閉じる
-          </button>
+
+          {/* 検索バー */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="店舗名や住所で検索..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-gray-800 placeholder-gray-500"
+            />
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Filter className="h-5 w-5 text-gray-400" />
+            </button>
+          </div>
+
+          {/* フィルター */}
+          {showFilters && (
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-white/20">
+              <div className="flex items-center space-x-2 mb-3">
+                <Layers className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">カテゴリで絞り込み</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                    selectedCategory === 'all'
+                      ? 'bg-blue-500 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  すべて
+                </button>
+                {['restaurant', 'convenience', 'retail', 'supermarket'].map(category => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                      selectedCategory === category
+                        ? 'bg-blue-500 text-white shadow-lg'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category === 'restaurant' ? '飲食店' :
+                     category === 'convenience' ? 'コンビニ' :
+                     category === 'retail' ? '小売店' :
+                     category === 'supermarket' ? 'スーパー' : category}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 左下：店舗数表示 */}
+      <div className="absolute bottom-4 left-4 z-10">
+        <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+          <StoreIcon className="h-5 w-5 text-blue-500" />
+          <span className="text-sm font-medium text-gray-700">
+            {filteredStores.length}件の店舗
+          </span>
+        </div>
+      </div>
+
+      {/* 右下：お気に入り店舗 */}
+      {favoriteStores.length > 0 && (
+        <div className="absolute bottom-4 right-4 z-10">
+          <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+            <Heart className="h-5 w-5 text-red-500 fill-current" />
+            <span className="text-sm font-medium text-gray-700">
+              {favoriteStores.length}件のお気に入り
+            </span>
+          </div>
         </div>
       )}
 
-      {/* 店舗数の表示（デバッグ用） */}
-      <div className="absolute top-4 left-4 bg-white px-3 py-2 rounded-lg shadow-lg">
-        <span className="text-sm font-medium text-gray-700">
-          店舗数: {stores.length}件
-        </span>
-      </div>
-      {/* 検索バー*/}
-      (
-      <input
-        type="text"
-        placeholder="検索"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="absolute top-23 left-4 w-90 pl-10 pr-4 py-3 border border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100"
-        />
-      )
-
-      {/* 検索ボタン */}
-      <button
-        className="absolute top-15 left-4 px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-      >
-        検索
-      </button>
-      {/* 戻るボタン */}
-      <button
-        onClick={() => {
-          if (onBackToTitle) {
-            onBackToTitle();
-          } else {
-            // フォールバック
-            window.location.reload();
-          }
-        }}
-        className="absolute top-4 left-30 bg-white px-3 py-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-      >
-        戻る
-      </button>
-
-       {/* 店舗詳細モーダル */}
-       <StoreDetailModal 
+      {/* 店舗詳細モーダル */}
+      <StoreDetailModal 
         store={selectedStore} 
-        onClose={() => setSelectedStore(null)} 
+        onClose={() => setSelectedStore(null)}
+        onToggleFavorite={toggleFavorite}
+        isFavorite={selectedStore ? favoriteStores.includes(selectedStore.id) : false}
       />
     </div>
   );
