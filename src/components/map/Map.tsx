@@ -151,6 +151,14 @@ export default function Map({ children, userData }: MapProps) {
         </span>
       </div>
 
+      {/* 戻るボタン（デバッグ用） */}
+      <button
+        onClick={() => window.location.href = "/"}
+        className="absolute top-4 left-30 bg-white px-3 py-2 rounded-lg shadow-lg"
+      >
+        戻る
+      </button>
+
        {/* 店舗詳細モーダル */}
        <StoreDetailModal 
         store={selectedStore} 
