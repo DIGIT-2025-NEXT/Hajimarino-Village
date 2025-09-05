@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { ArrowLeft, Check, CreditCard, Smartphone, Wallet, Train } from 'lucide-react';
 
 interface PaymentMethod {
@@ -17,7 +18,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'paypay',
     name: 'PayPay',
-    icon: '��',
+    icon: 'paypay.png',
     description: 'QRコード決済',
     category: 'qr',
     color: 'from-blue-500 to-blue-600'
@@ -25,70 +26,70 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'rakuten-pay',
     name: '楽天ペイ',
-    icon: '��',
+    icon: 'rakutenpay.png',
     description: 'QRコード決済',
     category: 'qr',
-    color: 'from-red-500 to-red-600'
+    color: 'from-white-500 to-white-600'
   },
   // NFC決済
   {
     id: 'google-pay',
     name: 'Google Pay',
-    icon: '��',
+    icon: 'googlepay.png',
     description: 'NFC決済',
     category: 'nfc',
-    color: 'from-green-500 to-green-600'
+    color: 'from-white-500 to-white-600'
   },
   {
     id: 'apple-pay',
     name: 'Apple Pay',
-    icon: '��',
+    icon: 'applepay.png',
     description: 'NFC決済',
     category: 'nfc',
-    color: 'from-gray-800 to-gray-900'
+    color: 'from-white-800 to-white-900'
   },
   // カード決済
   {
     id: 'credit-card',
     name: 'クレジットカード',
-    icon: '��',
+    icon: 'credit.png',
     description: '磁気・ICチップ',
     category: 'card',
-    color: 'from-purple-500 to-purple-600'
+    color: 'from-white-500 to-white-600'
   },
   // 交通系IC
   {
     id: 'nimoca',
     name: 'nimoca',
-    icon: '��',
+    icon: 'nimoca.png',
     description: '交通系IC',
     category: 'ic',
-    color: 'from-orange-500 to-orange-600'
+    color: 'from-white-500 to-white-600'
   },
   {
     id: 'suica',
     name: 'Suica',
-    icon: '��',
+    icon: 'suica.png',
     description: '交通系IC',
     category: 'ic',
-    color: 'from-red-600 to-red-700'
+    color: 'from-white-600 to-white-700'
   },
   {
     id: 'pasmo',
     name: 'PASMO',
-    icon: '��',
+    icon: 'pasmo.png',
     description: '交通系IC',
     category: 'ic',
-    color: 'from-blue-600 to-blue-700'
+    color: 'from-white-600 to-white-700'
   },
   // 現金
   {
     id: 'cash',
     name: '現金',
-    icon: '��',
+    icon: 'genkin.png',
     description: '現金決済',
     category: 'cash',
-    color: 'from-green-600 to-green-700'
+    color: 'from-white-600 to-white-700'
   }
 ];
 
@@ -201,7 +202,81 @@ export default function PaymentMethodSelection({ onBack, onRegistrationComplete 
                       
                       {/* 決済方法アイコン */}
                       <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${method.color} flex items-center justify-center text-white text-2xl mb-3`}>
-                        {method.icon}
+                      {method.id === 'paypay' ? (
+                          <Image
+                            src="/paypay.png"
+                            alt="PayPay"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : method.id === 'rakuten-pay' ? (
+                          <Image
+                            src="/rakutenpay.png"
+                            alt="楽天ペイ"
+                            width={48}
+                            height={48}
+                            className="rounded"
+                          />
+                        ) : method.id === 'google-pay' ? (
+                          <Image
+                            src="/googlepay.png"
+                            alt="Google Pay"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : method.id === 'apple-pay' ? (
+                          <Image
+                            src="/applepay.png"
+                            alt="Apple Pay"
+                            width={80}
+                            height={80}
+                            className="rounded"
+                          />
+                        ) : method.id === 'credit-card' ? (
+                          <Image
+                            src="/credit.png"
+                            alt="クレジットカード"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : method.id === 'nimoca' ? (
+                          <Image
+                            src="/nimoca.png"
+                            alt="nimoca"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : method.id === 'suica' ? (
+                          <Image
+                            src="/suica.png"
+                            alt="Suica"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : method.id === 'pasmo' ? (
+                          <Image
+                            src="/pasmo.png"
+                            alt="PASMO"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : method.id === 'cash' ? (
+                          <Image
+                            src="/genkin.png"
+                            alt="現金"
+                            width={50}
+                            height={50}
+                            className="rounded"
+                          />
+                        ) : (
+                          method.icon
+                        )}
                       </div>
                       
                       {/* 決済方法名 */}
