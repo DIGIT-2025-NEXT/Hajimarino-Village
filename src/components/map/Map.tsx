@@ -40,9 +40,8 @@ export default function Map({ children, userData }: MapProps) {
   const mapRef = useRef<google.maps.Map | undefined>(undefined); // 初期値をundefinedに設定
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState('');
-
+  
   // サンプルデータの読み込み
   useEffect(() => {
     setStores(SAMPLE_STORES);
@@ -59,7 +58,7 @@ export default function Map({ children, userData }: MapProps) {
   const handleMarkerClick = (store: Store) => {
     setSelectedStore(store);
   };
-
+  
   if (loadError) {
     return (
       <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
@@ -153,16 +152,22 @@ export default function Map({ children, userData }: MapProps) {
         </span>
       </div>
       {/* 検索バー*/}
-      {showSearch && (
+      (
       <input
         type="text"
         placeholder="検索"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="absolute top-15 left-4 w-90 pl-10 pr-4 py-3 border border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100"
+        className="absolute top-23 left-4 w-90 pl-10 pr-4 py-3 border border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100"
         />
-      )}
+      )
 
+      {/* 検索ボタン */}
+      <button
+        className="absolute top-15 left-4 px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        検索
+      </button>
       {/* 戻るボタン */}
       <button
         onClick={() => window.location.href = "/"}
