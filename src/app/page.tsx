@@ -10,7 +10,7 @@ import Map from '@/components/map/Map';
 type AppState = 'title' | 'login' | 'payment' | 'map';
 
 export default function Home() {
-  const { user, loading } = useAuthContext();
+  const { user, loading, signOut } = useAuthContext();
   const [appState, setAppState] = useState<AppState>('title');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
@@ -24,19 +24,6 @@ export default function Home() {
     );
   }
 
-  // ユーザーがログイン済みの場合は地図画面を表示
-  if (user) {
-    return (
-      <main className="h-screen">
-        <Map userData={{
-        email: user.email || '',
-        username: user.user_metadata.username || '',
-        selectedMethods: user.user_metadata?.selectedMethods || []
-       }} /> 
-      </main>
-    );
-  }
-
   const handleLoginStart = () => {
     setAppState('login');
   };
@@ -46,14 +33,15 @@ export default function Home() {
   };
 
   const handleLoginSuccess = () => {
-    // Supabase認証が成功すると自動的にuserが設定されるので、何もしない
-    console.log('ログイン成功');
+    // ログイン成功後、地図画面に遷移
+    setAppState('map');
   };
 
   const handleRegistrationComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
     console.log('新規登録完了:', userData);
     setShowPaymentSelection(false);
-    // Supabase認証が成功すると自動的にuserが設定される
+    // 新規登録完了後、地図画面に遷移
+    setAppState('map');
   };
 
   const handlePaymentComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
@@ -65,7 +53,31 @@ export default function Home() {
     setAppState('title');
   };
 
-  
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setAppState('title');
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+    }
+  };
+
+  // ユーザーがログイン済みで、地図画面を表示する場合
+  if (user && appState === 'map') {
+    return (
+      <main className="h-screen">
+        <Map 
+          userData={{
+            email: user.email || '',
+            username: user.user_metadata.username || '',
+            selectedMethods: user.user_metadata?.selectedMethods || []
+          }}
+          onBackToTitle={handleBackToTitle}
+        /> 
+      </main>
+    );
+  }
+
   // 開始画面
   if (appState === 'title') {
     return (
@@ -74,6 +86,8 @@ export default function Home() {
           onLoginStart={handleLoginStart}
           onGuestStart={handleGuestStart}
           appName="PayMapKitaQ"
+          onLogout={handleLogout}
+          isLoggedIn={!!user}
         />
       </main>
     );
@@ -106,10 +120,17 @@ export default function Home() {
     );
   }
 
-  // 地図画面
+  // デフォルトは地図画面
   return (
     <main className="h-screen">
-      <Map />
+      <Map 
+        userData={{
+          email: user?.email || '',
+          username: user?.user_metadata?.username || '',
+          selectedMethods: user?.user_metadata?.selectedMethods || []
+        }}
+        onBackToTitle={handleBackToTitle}
+      />
     </main>
   );
 }

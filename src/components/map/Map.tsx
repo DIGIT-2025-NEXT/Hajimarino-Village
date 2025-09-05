@@ -29,9 +29,10 @@ const MAP_OPTIONS = {
 interface MapProps {
   children?: React.ReactNode;
   userData?: { email: string; username: string; selectedMethods: string[] } | null;
+  onBackToTitle?: () => void; // 追加
 }
 
-export default function Map({ children, userData }: MapProps) {
+export default function Map({ children, userData, onBackToTitle }: MapProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
@@ -170,8 +171,15 @@ export default function Map({ children, userData }: MapProps) {
       </button>
       {/* 戻るボタン */}
       <button
-        onClick={() => window.location.href = "/"}
-        className="absolute top-4 left-30 bg-white px-3 py-2 rounded-lg shadow-lg"
+        onClick={() => {
+          if (onBackToTitle) {
+            onBackToTitle();
+          } else {
+            // フォールバック
+            window.location.reload();
+          }
+        }}
+        className="absolute top-4 left-30 bg-white px-3 py-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
       >
         戻る
       </button>
