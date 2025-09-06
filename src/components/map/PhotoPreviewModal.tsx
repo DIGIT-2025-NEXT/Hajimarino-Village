@@ -140,10 +140,10 @@ export default function PhotoPreviewModal({
           )}
         </div>
 
-        {/* サムネイル */}
+        {/* サムネイル - スクロールバー非表示 */}
         {photos.length > 1 && (
           <div className="p-4 bg-black/50">
-            <div className="flex space-x-2 overflow-x-auto">
+            <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
               {photos.map((photo, index) => (
                 <button
                   key={index}
