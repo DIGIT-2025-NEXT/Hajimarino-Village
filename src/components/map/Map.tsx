@@ -65,6 +65,23 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   // カスタムフックを使用して店舗データを取得
   const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
 
+  // 有効な座標を持つ店舗のみをフィルタリング
+  const validStores = stores.filter(store => 
+    store.latitude && 
+    store.longitude && 
+    typeof store.latitude === 'number' && 
+    typeof store.longitude === 'number' &&
+    !isNaN(store.latitude) &&
+    !isNaN(store.longitude)
+  );
+
+  const filteredStores = validStores.filter(store => {
+    const matchesSearch = store.name.toLowerCase().includes(search.toLowerCase()) ||
+                         store.address.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || store.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
@@ -84,13 +101,6 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         : [...prev, storeId]
     );
   };
-
-  const filteredStores = stores.filter(store => {
-    const matchesSearch = store.name.toLowerCase().includes(search.toLowerCase()) ||
-                         store.address.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || store.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   if (loadError) {
     return (
@@ -133,7 +143,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         {filteredStores.map((store) => (
           <Marker
             key={store.id}
-            position={{ lat: store.lat, lng: store.lng }}
+            position={{ lat: store.latitude, lng: store.longitude }}
             title={store.name}
             onClick={() => handleMarkerClick(store)}
             icon={{

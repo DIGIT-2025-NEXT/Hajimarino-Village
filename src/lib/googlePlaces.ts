@@ -30,11 +30,18 @@ export interface GooglePlaceDetails {
   formatted_phone_number?: string;
   opening_hours?: {
     weekday_text: string[];
-    open_now: boolean;
+    open_now?: boolean;
   };
   website?: string;
   rating?: number;
   user_ratings_total?: number;
+  // 写真情報を追加
+  photos?: Array<{
+    photo_reference: string;
+    height: number;
+    width: number;
+    html_attributions: string[];
+  }>;
 }
 
 // 周辺の店舗を検索（Next.js API Route経由）

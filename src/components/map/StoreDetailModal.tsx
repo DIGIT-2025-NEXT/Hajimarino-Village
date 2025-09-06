@@ -1,7 +1,25 @@
 'use client';
 
-import { X, MapPin, Clock, Phone, Star, Heart, Navigation, Share2, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  X, 
+  MapPin, 
+  Clock, 
+  Phone, 
+  Star, 
+  CheckCircle, 
+  XCircle, 
+  Heart, 
+  Share2, 
+  Navigation,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Eye,
+  Download
+} from 'lucide-react';
 import { Store, PaymentMethod } from '@/types/store';
+import PhotoPreviewModal from './PhotoPreviewModal';
 
 interface StoreDetailModalProps {
   store: Store | null;
@@ -16,7 +34,15 @@ export default function StoreDetailModal({
   onToggleFavorite, 
   isFavorite = false 
 }: StoreDetailModalProps) {
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
+  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
+
   if (!store) return null;
+
+  // デバッグ用ログを追加
+  console.log('Store photos:', store.photos);
+  console.log('Photos length:', store.photos?.length);
 
   // 住所を短縮表示する関数
   const shortenAddress = (address: string, maxLength: number = 50) => {
@@ -90,13 +116,92 @@ export default function StoreDetailModal({
   };
 
   const handleDirections = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${store.lat},${store.lng}`;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`;
     window.open(url, '_blank');
+  };
+
+  // 写真のURLを生成する関数
+  const getPhotoUrl = (photoReference: string, maxWidth: number = 400) => {
+    return `/api/places/photo?photo_reference=${photoReference}&maxwidth=${maxWidth}`;
+  };
+
+  // 写真の切り替え
+  const nextPhoto = () => {
+    if (store.photos && currentPhotoIndex < store.photos.length - 1) {
+      setCurrentPhotoIndex(currentPhotoIndex + 1);
+    }
+  };
+
+  const prevPhoto = () => {
+    if (currentPhotoIndex > 0) {
+      setCurrentPhotoIndex(currentPhotoIndex - 1);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        {/* 写真セクション */}
+        {store.photos && store.photos.length > 0 && (
+          <div className="relative h-48 bg-gray-100">
+            <img
+              src={getPhotoUrl(store.photos[currentPhotoIndex].photoReference)}
+              alt={`${store.name}の写真`}
+              className="w-full h-full object-cover"
+              onLoad={() => setIsLoadingPhoto(false)}
+              onError={() => setIsLoadingPhoto(false)}
+            />
+            
+            {/* ローディング表示 */}
+            {isLoadingPhoto && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            )}
+
+            {/* 写真ナビゲーション */}
+            {store.photos.length > 1 && (
+              <>
+                <button
+                  onClick={prevPhoto}
+                  disabled={currentPhotoIndex === 0}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={nextPhoto}
+                  disabled={currentPhotoIndex === store.photos.length - 1}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+
+            {/* 写真インディケーター */}
+            {store.photos.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                {store.photos.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentPhotoIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === currentPhotoIndex ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* 写真数表示 */}
+            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs flex items-center space-x-1">
+              <ImageIcon className="h-3 w-3" />
+              <span>{currentPhotoIndex + 1}/{store.photos.length}</span>
+            </div>
+          </div>
+        )}
+
         {/* ヘッダー */}
         <div className="relative bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
           <button
@@ -125,6 +230,27 @@ export default function StoreDetailModal({
 
           {/* アクションボタン */}
           <div className="flex items-center space-x-2 mt-4">
+            {/* 写真プレビューボタン - デバッグ情報を追加 */}
+            {store.photos && store.photos.length > 0 ? (
+              <button
+                onClick={() => setShowPhotoPreview(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-white/20 text-white rounded-xl hover:bg-white/30 transition-colors"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  写真を見る ({store.photos.length})
+                </span>
+              </button>
+            ) : (
+              // デバッグ用：写真がない場合の表示
+              <div className="flex items-center space-x-2 px-4 py-2 bg-gray-500/20 text-white rounded-xl">
+                <ImageIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  写真なし (デバッグ)
+                </span>
+              </div>
+            )}
+
             {onToggleFavorite && (
               <button
                 onClick={handleToggleFavorite}
@@ -173,6 +299,21 @@ export default function StoreDetailModal({
               </div>
             </div>
           </div>
+
+          {/* 評価情報 */}
+          {store.rating && (
+            <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+              <Star className="h-5 w-5 text-yellow-500 fill-current" />
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg font-bold text-yellow-800">{store.rating}</span>
+                  <span className="text-sm text-yellow-600">
+                    ({store.userRatingsTotal}件のレビュー)
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 営業時間 */}
           {store.businessHours && (
@@ -289,6 +430,15 @@ export default function StoreDetailModal({
           </div>
         </div>
       </div>
+
+      {/* 写真プレビューモーダル */}
+      {store.photos && store.photos.length > 0 && (
+        <PhotoPreviewModal
+          photos={store.photos}
+          isOpen={showPhotoPreview}
+          onClose={() => setShowPhotoPreview(false)}
+        />
+      )}
     </div>
   );
 }

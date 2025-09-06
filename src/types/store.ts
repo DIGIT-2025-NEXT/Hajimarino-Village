@@ -19,15 +19,27 @@ export interface PaymentMethod {
     id: string;
     name: string;
     address: string;
-    lat: number;
-    lng: number;
+    latitude: number;
+    longitude: number;
     category: StoreCategory;
     paymentMethods: PaymentMethod[];
-    lastVerified: string;
     trustScore: TrustScore;
-    description?: string;
-    phoneNumber?: string;
     businessHours?: string;
+    phoneNumber?: string;
+    website?: string;
+    rating?: number;
+    userRatingsTotal?: number;
+    lastVerified: string;
+    // 写真情報を追加
+    photos?: StorePhoto[];
+  }
+  
+  // 写真情報の型定義を追加
+  export interface StorePhoto {
+    photoReference: string;
+    height: number;
+    width: number;
+    htmlAttributions: string[];
   }
   
   // 決済方法のカテゴリ別グループ化

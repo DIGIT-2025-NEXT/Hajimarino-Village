@@ -37,15 +37,21 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
       id: place.place_id,
       name: details?.name || place.name,
       address: details?.formatted_address || place.vicinity,
-      lat: details?.geometry.location.lat || place.geometry.location.lat,
-      lng: details?.geometry.location.lng || place.geometry.location.lng,
+      latitude: details?.geometry.location.lat || place.geometry.location.lat,
+      longitude: details?.geometry.location.lng || place.geometry.location.lng,
       category: getCategory(place.types),
       paymentMethods: [], // 決済方法は後で追加
       lastVerified: new Date().toISOString().split('T')[0],
       trustScore: 'medium', // デフォルト値
-      description: `Google Places APIから取得した店舗情報`,
       phoneNumber: details?.formatted_phone_number,
-      businessHours: getBusinessHours(details?.opening_hours)
+      businessHours: getBusinessHours(details?.opening_hours),
+      // 写真情報を追加
+      photos: details?.photos?.map(photo => ({
+        photoReference: photo.photo_reference,
+        height: photo.height,
+        width: photo.width,
+        htmlAttributions: photo.html_attributions,
+      }))
     };
   };
 
