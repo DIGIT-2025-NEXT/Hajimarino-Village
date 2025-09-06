@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, MapPin, CreditCard, Sparkles } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import PaymentMethodSelection from './PaymentMethodSelection';
 
@@ -134,123 +134,179 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-        {/* ヘッダー */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            PayMapKitaQ
-          </h1>
-          <p className="text-gray-600">
-            北九州市の店舗で使える決済方法を確認
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* 背景装飾 - より控えめに */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute top-40 left-40 w-60 h-60 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+      </div>
 
-        {/* タブ切り替え */}
-        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
-          <button
-            onClick={() => onModeChange('login')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              currentMode === 'login'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            ログイン
-          </button>
-          <button
-            onClick={() => onModeChange('register')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              currentMode === 'register'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            新規登録
-          </button>
-        </div>
+      <div className="max-w-md w-full relative z-10">
+        {/* メインカード - 他の画面と統一感のある色味 */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/50">
+          {/* ヘッダー */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <div className="relative">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <MapPin className="h-8 w-8 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-pink-500 to-yellow-500 rounded-full flex items-center justify-center">
+                  <Sparkles className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              PayMapKitaQ
+            </h1>
+            <p className="text-gray-600 text-sm">
+              北九州市の店舗で使える決済方法を確認
+            </p>
+          </div>
 
-        {/* フォーム */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {currentMode === 'register' && (
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          {/* タブ切り替え */}
+          <div className="flex bg-gray-100 rounded-2xl p-1 mb-8">
+            <button
+              onClick={() => onModeChange('login')}
+              className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-300 ${
+                currentMode === 'login'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              ログイン
+            </button>
+            <button
+              onClick={() => onModeChange('register')}
+              className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-300 ${
+                currentMode === 'register'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              新規登録
+            </button>
+          </div>
+
+          {/* フォーム */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {currentMode === 'register' && (
+              <div className="relative group">
+                <div className="absolute left-4 top-4 z-10">
+                  <User className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="ユーザー名"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-sm"
+                  required={currentMode === 'register'}
+                />
+              </div>
+            )}
+
+            <div className="relative group">
+              <div className="absolute left-4 top-4 z-10">
+                <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+              </div>
               <input
-                type="text"
-                placeholder="ユーザー名"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required={currentMode === 'register'}
+                type="email"
+                placeholder="メールアドレス"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-sm"
+                required
               />
             </div>
-          )}
 
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <input
-              type="email"
-              placeholder="メールアドレス"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="パスワード"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              minLength={6}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </button>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                処理中...
+            <div className="relative group">
+              <div className="absolute left-4 top-4 z-10">
+                <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
               </div>
-            ) : (
-              currentMode === 'login' ? 'ログイン' : '新規登録'
-            )}
-          </button>
-        </form>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="パスワード"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-12 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-sm"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
 
-        {/* フッター */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            {currentMode === 'login' ? 'アカウントをお持ちでない方は' : 'すでにアカウントをお持ちの方は'}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
+                {error}
+              </div>
+            )}
+
             <button
-              onClick={() => onModeChange(currentMode === 'login' ? 'register' : 'login')}
-              className="text-blue-600 hover:text-blue-700 font-medium ml-1"
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 px-6 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              {currentMode === 'login' ? '新規登録' : 'ログイン'}
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  処理中...
+                </div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  {currentMode === 'login' ? (
+                    <>
+                      <CreditCard className="h-5 w-5 mr-2" />
+                      ログイン
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      新規登録
+                    </>
+                  )}
+                </div>
+              )}
             </button>
-          </p>
+          </form>
+
+          {/* フッター */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-600">
+              {currentMode === 'login' ? 'アカウントをお持ちでない方は' : 'すでにアカウントをお持ちの方は'}
+              <button
+                onClick={() => onModeChange(currentMode === 'login' ? 'register' : 'login')}
+                className="text-blue-600 hover:text-blue-700 font-medium ml-1 transition-colors"
+              >
+                {currentMode === 'login' ? '新規登録' : 'ログイン'}
+              </button>
+            </p>
+          </div>
+        </div>
+
+        {/* 追加の装飾要素 - より控えめに */}
+        <div className="mt-8 text-center">
+          <div className="flex items-center justify-center space-x-4 text-gray-500 text-xs">
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+              安全な認証
+            </div>
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+              プライバシー保護
+            </div>
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
+              リアルタイム更新
+            </div>
+          </div>
         </div>
       </div>
     </div>
