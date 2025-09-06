@@ -107,7 +107,22 @@ export const searchMultipleStoreTypes = async (
     'supermarket',
     'restaurant',
     'food',
-    'shopping_mall'
+    'shopping_mall',
+    // 追加の店舗タイプ
+    'bakery',
+    'cafe',
+    'clothing_store',
+    'electronics_store',
+    'furniture_store',
+    'hardware_store',
+    'jewelry_store',
+    'shoe_store',
+    'book_store',
+    'pharmacy',
+    'gas_station',
+    'atm',
+    'bank',
+    'post_office'
   ];
   
   const allResults: GooglePlace[] = [];

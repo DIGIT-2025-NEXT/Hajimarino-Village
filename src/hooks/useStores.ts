@@ -63,10 +63,32 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
       if (useRealData) {
         // Google Places APIから実際のデータを取得
         console.log('Google Places APIから店舗データを取得中...');
-        const googlePlaces = await searchMultipleStoreTypes(lat, lng, 2000);
         
-        // 最大20件に制限（API制限とパフォーマンスのため）
-        const limitedPlaces = googlePlaces.slice(0, 20);
+        // 段階的に検索範囲を拡大
+        const searchRadii = [2000, 5000, 10000]; // 2km, 5km, 10km
+        let allPlaces: GooglePlace[] = [];
+        
+        for (const radius of searchRadii) {
+          try {
+            const places = await searchMultipleStoreTypes(lat, lng, radius);
+            allPlaces = [...allPlaces, ...places];
+            
+            // 十分な店舗数が取得できたら停止
+            if (allPlaces.length >= 100) {
+              break;
+            }
+          } catch (error) {
+            console.error(`Error searching with radius ${radius}:`, error);
+          }
+        }
+        
+        // 重複を除去
+        const uniquePlaces = allPlaces.filter((place, index, self) => 
+          index === self.findIndex(p => p.place_id === place.place_id)
+        );
+        
+        // 最大100件に制限
+        const limitedPlaces = uniquePlaces.slice(0, 100);
         
         // データを変換
         const convertedStores = await Promise.all(
@@ -80,10 +102,10 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
         setStores(SAMPLE_STORES);
         console.log('サンプルデータを使用しています');
       }
-    } catch (err) {
-      console.error('店舗データの取得に失敗:', err);
-      setError(err instanceof Error ? err.message : '店舗データの取得に失敗しました');
-      // エラー時はサンプルデータにフォールバック
+    } catch (error) {
+      console.error('店舗データの取得に失敗:', error);
+      setError('店舗データの取得に失敗しました');
+      // エラー時はサンプルデータを使用
       setStores(SAMPLE_STORES);
     } finally {
       setLoading(false);
