@@ -61,21 +61,41 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
-  const [useRealData, setUseRealData] = useState(false); // 新規追加
+  const [useRealData, setUseRealData] = useState(true); // デフォルトをtrueに変更
   const [showSettings, setShowSettings] = useState(false);
+  const [dataSource, setDataSource] = useState<'google' | 'osm' | 'both'>('both');
 
   // カスタムフックを使用して店舗データを取得
   const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
 
+  // デバッグ情報を追加
+  useEffect(() => {
+    console.log('=== デバッグ情報 ===');
+    console.log('useRealData:', useRealData);
+    console.log('stores配列の長さ:', stores.length);
+    console.log('stores:', stores);
+    console.log('loading:', loading);
+    console.log('error:', error);
+    console.log('==================');
+  }, [stores, loading, error, useRealData]);
+
   // 有効な座標を持つ店舗のみをフィルタリング
-  const validStores = stores.filter(store => 
-    store.latitude && 
-    store.longitude && 
-    typeof store.latitude === 'number' && 
-    typeof store.longitude === 'number' &&
-    !isNaN(store.latitude) &&
-    !isNaN(store.longitude)
-  );
+  const validStores = stores.filter(store => {
+    const isValid = store.latitude && 
+      store.longitude && 
+      typeof store.latitude === 'number' && 
+      typeof store.longitude === 'number' &&
+      !isNaN(store.latitude) &&
+      !isNaN(store.longitude);
+    
+    if (!isValid) {
+      console.log('無効な店舗データ:', store);
+    }
+    
+    return isValid;
+  });
+
+  console.log('有効な店舗数:', validStores.length);
 
   const filteredStores = validStores.filter(store => {
     const matchesSearch = store.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -147,64 +167,59 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         mapContainerClassName="w-full h-full rounded-lg"
         center={CENTER}
         zoom={15}
-        options={MAP_OPTIONS}
         onLoad={onLoad}
         onUnmount={onUnmount}
+        options={MAP_OPTIONS}
       >
-        {/* 店舗ピンの表示 */}
+        {/* 店舗マーカー */}
         {filteredStores.map((store) => (
           <Marker
             key={store.id}
-            position={{ lat: store.latitude, lng: store.longitude }}
-            title={store.name}
+            position={{
+              lat: store.latitude!,
+              lng: store.longitude!
+            }}
             onClick={() => handleMarkerClick(store)}
             icon={{
-              url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
                 <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="20" cy="20" r="20" fill="#3B82F6" opacity="0.9"/>
-                  <circle cx="20" cy="20" r="12" fill="white"/>
-                  <text x="20" y="25" text-anchor="middle" font-size="12" fill="#3B82F6" font-weight="bold">店</text>
+                  <circle cx="20" cy="20" r="18" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2"/>
+                  <text x="20" y="26" text-anchor="middle" fill="white" font-size="16" font-weight="bold">🏪</text>
                 </svg>
-              `),
-              scaledSize: new google.maps.Size(40, 40)
+              `)}`,
+              scaledSize: new google.maps.Size(40, 40),
             }}
           />
         ))}
       </GoogleMap>
 
-      {/* 上部UI */}
-      <div className="absolute top-4 left-4 right-4 z-10">
-        <div className="flex flex-col space-y-3">
+      {/* UI要素 */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-4 left-4 right-4 space-y-4 pointer-events-auto">
           {/* ヘッダー */}
           <div className="flex items-center justify-between">
             {/* 戻るボタン */}
             <button
-              onClick={() => {
-                if (onBackToTitle) {
-                  onBackToTitle();
-                } else {
-                  window.location.reload();
-                }
-              }}
-              className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm text-gray-700 rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+              onClick={onBackToTitle}
+              className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
             >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">戻る</span>
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+              <span className="text-gray-800 font-medium">タイトルへ</span>
             </button>
 
-            {/* データソース切り替え */}
+            {/* データソース選択 */}
             <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-              <span className="text-sm text-gray-600">リアルデータ</span>
-              <button
-                onClick={() => setUseRealData(!useRealData)}
-                className="flex items-center space-x-1"
+              <Layers className="h-4 w-4 text-gray-600" />
+              <span className="text-sm text-gray-600">データソース</span>
+              <select
+                value={dataSource}
+                onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
+                className="text-sm bg-transparent border-none outline-none"
               >
-                {useRealData ? (
-                  <ToggleRight className="h-5 w-5 text-blue-500" />
-                ) : (
-                  <ToggleLeft className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
+                <option value="both">OSM + Google</option>
+                <option value="osm">OSM のみ</option>
+                <option value="google">Google のみ</option>
+              </select>
             </div>
 
             {/* ユーザー情報 - クリック可能に変更 */}
@@ -247,89 +262,141 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
           {/* ローディング・エラー表示 */}
           {loading && (
             <div className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 rounded-xl">
-              <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
-              <span className="text-sm text-blue-600">店舗データを取得中...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-blue-600 text-sm">店舗データを読み込み中...</span>
             </div>
           )}
 
           {error && (
-            <div className="px-4 py-3 bg-red-50 rounded-xl">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="flex items-center justify-between px-4 py-3 bg-red-50 rounded-xl">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span className="text-red-600 text-sm">{error}</span>
+              </div>
+              <button
+                onClick={refetch}
+                className="p-1 hover:bg-red-100 rounded-lg transition-colors"
+              >
+                <RefreshCw className="h-4 w-4 text-red-600" />
+              </button>
             </div>
           )}
 
-          {/* フィルター */}
-          {showFilters && (
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-white/20">
-              <div className="flex items-center space-x-2 mb-3">
-                <Layers className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">カテゴリで絞り込み</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedCategory('all')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                    selectedCategory === 'all'
-                      ? 'bg-blue-500 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          {/* データモード切り替え */}
+          <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-4 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+              <span className={`text-sm font-medium ${!useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
+                デモデータ
+              </span>
+              <button
+                onClick={() => setUseRealData(!useRealData)}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                style={{
+                  backgroundColor: useRealData ? '#3B82F6' : '#D1D5DB'
+                }}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    useRealData ? 'translate-x-6' : 'translate-x-1'
                   }`}
-                >
-                  すべて
-                </button>
-                {['restaurant', 'convenience', 'retail', 'supermarket'].map(category => (
+                />
+              </button>
+              <span className={`text-sm font-medium ${useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
+                リアルデータ
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* フィルター */}
+        {showFilters && (
+          <div className="absolute top-32 left-4 right-4 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-800">カテゴリフィルター</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {['all', 'convenience', 'restaurant', 'supermarket', 'retail', 'other'].map((category) => (
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                    className={`px-3 py-2 text-sm rounded-lg transition-colors ${
                       selectedCategory === category
-                        ? 'bg-blue-500 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {category === 'restaurant' ? '飲食店' :
+                    {category === 'all' ? 'すべて' : 
                      category === 'convenience' ? 'コンビニ' :
-                     category === 'retail' ? '小売店' :
-                     category === 'supermarket' ? 'スーパー' : category}
+                     category === 'restaurant' ? 'レストラン' :
+                     category === 'supermarket' ? 'スーパー' :
+                     category === 'retail' ? '小売店' : 'その他'}
                   </button>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* 左下：店舗数表示 */}
-      <div className="absolute bottom-4 left-4 z-10">
-        <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-          <StoreIcon className="h-5 w-5 text-blue-500" />
-          <span className="text-sm font-medium text-gray-700">
-            {filteredStores.length}件の店舗
-          </span>
-          {useRealData && (
-            <span className="text-xs text-blue-500">(リアルデータ)</span>
-          )}
-        </div>
-      </div>
+        {/* お気に入り店舗 */}
+        {favoriteStores.length > 0 && (
+          <div className="absolute top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
+            <div className="flex items-center space-x-2 mb-2">
+              <Heart className="h-4 w-4 text-red-500" />
+              <span className="text-sm font-medium text-gray-800">お気に入り</span>
+            </div>
+            <div className="space-y-1">
+              {favoriteStores.slice(0, 3).map((storeId) => {
+                const store = stores.find(s => s.id === storeId);
+                return store ? (
+                  <div key={storeId} className="text-xs text-gray-600 truncate">
+                    {store.name}
+                  </div>
+                ) : null;
+              })}
+              {favoriteStores.length > 3 && (
+                <div className="text-xs text-gray-400">
+                  +{favoriteStores.length - 3}件
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-      {/* 右下：お気に入り店舗 */}
-      {favoriteStores.length > 0 && (
-        <div className="absolute bottom-4 right-4 z-10">
-          <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-            <Heart className="h-5 w-5 text-red-500 fill-current" />
-            <span className="text-sm font-medium text-gray-700">
-              {favoriteStores.length}件のお気に入り
+        {/* 店舗数表示 */}
+        <div className="absolute bottom-4 left-4 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
+          <div className="flex items-center space-x-2">
+            <MapPin className="h-4 w-4 text-blue-500" />
+            <span className="text-sm font-medium text-gray-800">
+              {filteredStores.length}件の店舗
             </span>
           </div>
         </div>
-      )}
+
+        {/* 検索バー（下部） */}
+        <div className="absolute bottom-4 right-4 w-64 pointer-events-auto">
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Q 検索"
+              className="w-full pl-10 pr-4 py-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-sm text-gray-800 placeholder-gray-500"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* 店舗詳細モーダル */}
-      <StoreDetailModal 
-        store={selectedStore} 
-        onClose={() => setSelectedStore(null)}
-        onToggleFavorite={toggleFavorite}
-        isFavorite={selectedStore ? favoriteStores.includes(selectedStore.id) : false}
-      />
+      {selectedStore && (
+        <StoreDetailModal
+          store={selectedStore}
+          onClose={() => setSelectedStore(null)}
+          onToggleFavorite={toggleFavorite}
+          isFavorite={favoriteStores.includes(selectedStore.id)}
+        />
+      )}
+
+      {children}
     </div>
   );
 }
