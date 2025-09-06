@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Store } from '@/types/store';
-import { SAMPLE_STORES } from '@/data/sampleStores';
+import { useStores } from '@/hooks/useStores';
 import StoreDetailModal from './StoreDetailModal';
 import { 
   ArrowLeft, 
@@ -16,7 +16,10 @@ import {
   Heart,
   Star,
   Navigation,
-  Layers
+  Layers,
+  RefreshCw,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 
 // 北九州市の中心座標（小倉駅周辺）
@@ -52,17 +55,15 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   });
 
   const mapRef = useRef<google.maps.Map | undefined>(undefined);
-  const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
+  const [useRealData, setUseRealData] = useState(false); // 新規追加
 
-  // サンプルデータの読み込み
-  useEffect(() => {
-    setStores(SAMPLE_STORES);
-  }, []);
+  // カスタムフックを使用して店舗データを取得
+  const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -169,6 +170,21 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               <span className="font-medium">戻る</span>
             </button>
 
+            {/* データソース切り替え */}
+            <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+              <span className="text-sm text-gray-600">リアルデータ</span>
+              <button
+                onClick={() => setUseRealData(!useRealData)}
+                className="flex items-center space-x-1"
+              >
+                {useRealData ? (
+                  <ToggleRight className="h-5 w-5 text-blue-500" />
+                ) : (
+                  <ToggleLeft className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+
             {/* ユーザー情報 */}
             {userData && (
               <div className="flex items-center space-x-3 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
@@ -202,6 +218,20 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               <Filter className="h-5 w-5 text-gray-400" />
             </button>
           </div>
+
+          {/* ローディング・エラー表示 */}
+          {loading && (
+            <div className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 rounded-xl">
+              <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
+              <span className="text-sm text-blue-600">店舗データを取得中...</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="px-4 py-3 bg-red-50 rounded-xl">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
           {/* フィルター */}
           {showFilters && (
@@ -250,6 +280,9 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
           <span className="text-sm font-medium text-gray-700">
             {filteredStores.length}件の店舗
           </span>
+          {useRealData && (
+            <span className="text-xs text-blue-500">(リアルデータ)</span>
+          )}
         </div>
       </div>
 
