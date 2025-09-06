@@ -12,7 +12,7 @@ import {
   MapPin, 
   Store as StoreIcon, 
   User, 
-  Settings,
+  Settings as SettingsIcon,
   Heart,
   Star,
   Navigation,
@@ -21,6 +21,7 @@ import {
   ToggleLeft,
   ToggleRight
 } from 'lucide-react';
+import Settings from '../Settings';
 
 // 北九州市の中心座標（小倉駅周辺）
 const CENTER = {
@@ -61,6 +62,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
   const [useRealData, setUseRealData] = useState(false); // 新規追加
+  const [showSettings, setShowSettings] = useState(false);
 
   // カスタムフックを使用して店舗データを取得
   const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
@@ -125,6 +127,16 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
           <div className="text-gray-600">地図を読み込み中...</div>
         </div>
       </div>
+    );
+  }
+
+  // 設定画面を表示している場合はSettingsコンポーネントを返す
+  if (showSettings) {
+    return (
+      <Settings 
+        userData={userData}
+        onBackToMap={() => setShowSettings(false)}
+      />
     );
   }
 
@@ -195,17 +207,20 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               </button>
             </div>
 
-            {/* ユーザー情報 */}
+            {/* ユーザー情報 - クリック可能に変更 */}
             {userData && (
-              <div className="flex items-center space-x-3 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="flex items-center space-x-3 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <div>
+                <div className="text-left">
                   <p className="text-sm font-medium text-gray-800">{userData.username}</p>
                   <p className="text-xs text-gray-500">{userData.selectedMethods.length}個の決済方法</p>
                 </div>
-              </div>
+              </button>
             )}
           </div>
 
