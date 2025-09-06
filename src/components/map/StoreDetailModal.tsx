@@ -18,6 +18,18 @@ export default function StoreDetailModal({
 }: StoreDetailModalProps) {
   if (!store) return null;
 
+  // 住所を短縮表示する関数
+  const shortenAddress = (address: string, maxLength: number = 50) => {
+    if (address.length <= maxLength) return address;
+    return address.substring(0, maxLength) + '...';
+  };
+
+  // 店舗名を短縮表示する関数
+  const shortenStoreName = (name: string, maxLength: number = 30) => {
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength) + '...';
+  };
+
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       restaurant: '飲食店',
@@ -98,11 +110,15 @@ export default function StoreDetailModal({
             <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-2xl">
               {getCategoryIcon(store.category)}
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1">{store.name}</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-bold mb-1 break-words">
+                {shortenStoreName(store.name)}
+              </h2>
               <div className="flex items-center space-x-2 text-sm text-white/90">
-                <MapPin className="h-4 w-4" />
-                <span className="truncate">{store.address}</span>
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate" title={store.address}>
+                  {shortenAddress(store.address)}
+                </span>
               </div>
             </div>
           </div>
@@ -160,11 +176,13 @@ export default function StoreDetailModal({
 
           {/* 営業時間 */}
           {store.businessHours && (
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
-              <Clock className="h-5 w-5 text-gray-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-800">営業時間</p>
-                <p className="text-sm text-gray-600">{store.businessHours}</p>
+            <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl">
+              <Clock className="h-5 w-5 text-gray-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-800 mb-1">営業時間</p>
+                <p className="text-sm text-gray-600 break-words">
+                  {store.businessHours}
+                </p>
               </div>
             </div>
           )}
@@ -179,6 +197,19 @@ export default function StoreDetailModal({
               </div>
             </div>
           )}
+
+          {/* 完全な住所（ツールチップ用） */}
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <div className="flex items-start space-x-2">
+              <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-800 mb-1">住所</p>
+                <p className="text-sm text-gray-600 break-words" title={store.address}>
+                  {store.address}
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* 最終更新日 */}
           <div className="text-xs text-gray-500 text-center">

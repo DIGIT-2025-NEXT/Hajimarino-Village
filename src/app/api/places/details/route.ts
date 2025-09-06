@@ -9,8 +9,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // 日本語化のためのパラメータを追加
     const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=place_id,name,formatted_address,geometry,formatted_phone_number,opening_hours,website,rating,user_ratings_total&language=ja&region=jp&key=${process.env.GOOGLE_MAPS_API_KEY}`
     );
 
     if (!response.ok) {
