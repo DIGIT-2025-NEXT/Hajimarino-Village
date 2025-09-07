@@ -32,6 +32,7 @@ export interface PaymentMethod {
     lastVerified: string;
     // 写真情報を追加
     photos?: StorePhoto[];
+    description?: string;
   }
   
   // 写真情報の型定義を追加
