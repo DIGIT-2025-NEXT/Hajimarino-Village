@@ -87,8 +87,8 @@ export const SAMPLE_STORES: Store[] = [
     id: '1',
     name: 'セブン-イレブン 小倉駅前店',
     address: '北九州市小倉北区浅野1-1-1',
-    lat: 33.8867,
-    lng: 130.8828,
+    latitude: 33.8867,
+    longitude: 130.8828,
     category: 'convenience',
     paymentMethods: [
       { ...PAYMENT_METHODS_MASTER[0], isSupported: true, verifiedAt: '2024-01-15' }, // PayPay
@@ -105,8 +105,8 @@ export const SAMPLE_STORES: Store[] = [
     id: '2',
     name: 'マクドナルド 小倉駅前店',
     address: '北九州市小倉北区浅野1-1-2',
-    lat: 33.8870,
-    lng: 130.8830,
+    latitude: 33.8870,
+    longitude: 130.8830,
     category: 'restaurant',
     paymentMethods: [
       { ...PAYMENT_METHODS_MASTER[0], isSupported: true, verifiedAt: '2024-01-10' }, // PayPay
@@ -123,8 +123,8 @@ export const SAMPLE_STORES: Store[] = [
     id: '3',
     name: 'ローソン 小倉駅北口店',
     address: '北九州市小倉北区浅野1-1-3',
-    lat: 33.8865,
-    lng: 130.8825,
+    latitude: 33.8865,
+    longitude: 130.8825,
     category: 'convenience',
     paymentMethods: [
       { ...PAYMENT_METHODS_MASTER[0], isSupported: true, verifiedAt: '2024-01-12' }, // PayPay
