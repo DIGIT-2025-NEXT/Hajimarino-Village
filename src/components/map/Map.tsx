@@ -212,21 +212,21 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
 
 
             {/* データソース選択 */}
-<div className="flex items-center space-x-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg text-sm md:px-4 md:py-3 md:text-base">
-  <Layers className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+          <div className="flex items-center space-x-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg text-sm md:px-4 md:py-3 md:text-base">
+          <Layers className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
 
-  <span className="hidden sm:inline text-gray-600">データソース</span>
+          <span className="hidden sm:inline text-gray-600">データソース</span>
 
-  <select
-    value={dataSource}
-    onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
-    className="bg-transparent border-none outline-none text-sm md:text-base"
+          <select
+          value={dataSource}
+          onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
+          className="bg-transparent border-none outline-none text-sm md:text-base"
   >
-    <option value="both">OSM + Google</option>
-    <option value="osm">OSM のみ</option>
-    <option value="google">Google のみ</option>
-  </select>
-</div>
+          <option value="both">OSM + Google</option>
+          <option value="osm">OSM のみ</option>
+          <option value="google">Google のみ</option>
+          </select>
+          </div>
 
             {/* ユーザー情報 - クリック可能に変更 */}
             {userData && (
