@@ -39,6 +39,7 @@ interface SettingsSection {
 interface SettingsProps {
   userData?: { email: string; username: string; selectedMethods: string[] } | null;
   onBackToMap: () => void;
+  onChangePayment: () => void; 
 }
 
 export default function Settings({ userData, onBackToMap }: SettingsProps) {
@@ -58,6 +59,10 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
     }
   };
 
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const PaymentMethodView = () => setShowPaymentModal(true);
+
   const settingsSections: SettingsSection[] = [
     {
       title: 'アカウント',
@@ -72,7 +77,7 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
         {
           label: '決済方法',
           description: `${userData?.selectedMethods.length || 0}個の決済方法`,
-          action: () => console.log('決済方法設定'),
+          action: () => PaymentMethodView(), 
           showChevron: true
         }
       ]
@@ -202,6 +207,32 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
         </div>
       </div>
 
+      {showPaymentModal && (
+      <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+    <div className="bg-white rounded-xl p-4 w-9/10 max-w-md h-5/6 shadow-lg overflow-auto">
+          <h2>ここに設定した決済方法を表示</h2>
+          <ul>
+            {userData?.selectedMethods.map((m, i) => <li key={i}>{m}</li>)}
+          </ul>
+          <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-center space-x-4">
+          <button
+          onClick={() => setShowPaymentModal(false)}
+          className="px-7 py-2 bg-blue-500 text-white font-medium rounded-lg"
+          >
+          閉じる
+          </button>
+          <button
+          onClick={() => console.log('決済方法を変更')}
+          className="px-7 py-2 bg-blue-500 text-white font-medium rounded-lg"
+          >
+          決済方法を変更
+        </button>
+        </div>
+
+        </div>
+      </div>
+      )}
+
       {/* 設定セクション */}
       <div className="px-4 py-4 space-y-4">
         {settingsSections.map((section, sectionIndex) => (
@@ -215,7 +246,11 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
             
             <div className="divide-y divide-gray-100">
               {section.items.map((item, itemIndex) => (
-                <div key={itemIndex} className="px-4 py-3">
+                 <div
+                 key={itemIndex}
+                 className="px-4 py-3 cursor-pointer"   
+                 onClick={item.action}                  
+                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
