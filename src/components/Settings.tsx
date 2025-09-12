@@ -39,7 +39,6 @@ interface SettingsSection {
 interface SettingsProps {
   userData?: { email: string; username: string; selectedMethods: string[] } | null;
   onBackToMap: () => void;
-  onChangePayment: () => void; 
 }
 
 export default function Settings({ userData, onBackToMap }: SettingsProps) {
