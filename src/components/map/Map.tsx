@@ -380,20 +380,6 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
             </span>
           </div>
         </div>
-
-        {/* 検索バー（下部） */}
-        <div className="absolute bottom-4 right-4 w-64 pointer-events-auto">
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Q 検索"
-              className="w-full pl-10 pr-4 py-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-sm text-gray-800 placeholder-gray-500"
-            />
-          </div>
-        </div>
       </div>
 
       {/* 店舗詳細モーダル */}
