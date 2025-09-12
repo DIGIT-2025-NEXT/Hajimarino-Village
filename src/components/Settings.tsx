@@ -59,9 +59,10 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
   };
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const PaymentMethodView = () => setShowPaymentModal(true);
-
+  const ProfileView = () => setShowProfileModal(true);
   const settingsSections: SettingsSection[] = [
     {
       title: 'アカウント',
@@ -70,7 +71,7 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
         {
           label: 'プロフィール',
           description: userData?.username || 'ゲストユーザー',
-          action: () => console.log('プロフィール編集'),
+          action: () => ProfileView(),
           showChevron: true
         },
         {
@@ -206,31 +207,99 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
         </div>
       </div>
 
-      {showPaymentModal && (
-      <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-    <div className="bg-white rounded-xl p-4 w-9/10 max-w-md h-5/6 shadow-lg overflow-auto">
-          <h2>ここに設定した決済方法を表示</h2>
-          <ul>
-            {userData?.selectedMethods.map((m, i) => <li key={i}>{m}</li>)}
-          </ul>
-          <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-center space-x-4">
-          <button
-          onClick={() => setShowPaymentModal(false)}
-          className="px-7 py-2 bg-blue-500 text-white font-medium rounded-lg"
-          >
-          閉じる
-          </button>
-          <button
-          onClick={() => console.log('決済方法を変更')}
-          className="px-7 py-2 bg-blue-500 text-white font-medium rounded-lg"
-          >
-          決済方法を変更
+      {showProfileModal && (
+  <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+    <div className="bg-white rounded-2xl shadow-2xl w-11/12 max-w-lg h-5/6 flex flex-col overflow-hidden">
+      
+      {/* ヘッダー */}
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-500 to-purple-500">
+        <h2 className="text-lg font-semibold text-white">プロフィール</h2>
+        <button
+          onClick={() => setShowProfileModal(false)}
+          className="text-white hover:text-gray-200"
+        >
+          ✕
         </button>
-        </div>
+      </div>
 
+      {/* コンテンツ */}
+      <div className="flex-1 overflow-auto px-6 py-4 space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center text-white text-xl font-bold shadow-md">
+            {userData?.username?.[0] || "U"}
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-gray-900">
+              {userData?.username || "ゲストユーザー"}
+            </p>
+            <p className="text-sm text-gray-500">{userData?.email || "未登録"}</p>
+          </div>
         </div>
       </div>
-      )}
+
+      {/* フッター */}
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+        <button
+          onClick={() => console.log("プロフィールを変更")}
+          className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
+        >
+          プロフィールを変更
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+{showPaymentModal && (
+  <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+    <div className="bg-white rounded-2xl shadow-2xl w-11/12 max-w-lg h-5/6 flex flex-col overflow-hidden">
+
+      {/* ヘッダー */}
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-500 to-purple-500">
+        <h2 className="text-lg font-semibold text-white">決済方法</h2>
+        <button
+          onClick={() => setShowPaymentModal(false)}
+          className="text-white hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* コンテンツ */}
+      <div className="flex-1 overflow-auto px-6 py-4 space-y-4">
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">選択済みの決済方法</h3>
+          <ul className="space-y-2">
+            {userData?.selectedMethods?.length ? (
+              userData.selectedMethods.map((m, i) => (
+                <li
+                  key={i}
+                  className="px-3 py-2 bg-white rounded-lg shadow-sm text-sm text-gray-700"
+                >
+                  {m}
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-gray-400">未設定</li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      {/* フッター */}
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+        <button
+          onClick={() => console.log("決済方法を変更")}
+          className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
+        >
+          決済方法を変更
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* 設定セクション */}
       <div className="px-4 py-4 space-y-4">

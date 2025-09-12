@@ -155,9 +155,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
     return (
       <Settings 
         userData={userData}
-        onBackToMap={() => setShowSettings(false)} onChangePayment={function (): void {
-          throw new Error('Function not implemented.');
-        } }      />
+        onBackToMap={() => setShowSettings(false)}      />
     );
   }
 
