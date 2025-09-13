@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Store } from '@/types/store';
 import { useStores } from '@/hooks/useStores';
+import { useStoreSearch } from '@/hooks/useStoreSearch';
 import StoreDetailModal from './StoreDetailModal';
 import { 
   ArrowLeft, 
@@ -19,7 +20,8 @@ import {
   Layers,
   RefreshCw,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  X
 } from 'lucide-react';
 import Settings from '../Settings';
 
@@ -61,26 +63,57 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
-  const [useRealData, setUseRealData] = useState(true); // デフォルトをtrueに変更
+  const [useRealData, setUseRealData] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [dataSource, setDataSource] = useState<'google' | 'osm' | 'both'>('both');
+  
+  // 検索モードの状態管理
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // カスタムフックを使用して店舗データを取得
   const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
+  
+  // テキスト検索フック
+  const { searchResults, isSearching, searchError, searchStores } = useStoreSearch(CENTER.lat, CENTER.lng);
 
-  // デバッグ情報を追加
-  useEffect(() => {
-    console.log('=== デバッグ情報 ===');
-    console.log('useRealData:', useRealData);
-    console.log('stores配列の長さ:', stores.length);
-    console.log('stores:', stores);
-    console.log('loading:', loading);
-    console.log('error:', error);
-    console.log('==================');
-  }, [stores, loading, error, useRealData]);
+  // 検索入力のハンドリング（デバウンス付き）
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    
+    // 既存のタイムアウトをクリア
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    if (value.trim()) {
+      setIsSearchMode(true);
+      // 500ms後に検索を実行
+      const timeout = setTimeout(() => {
+        searchStores(value);
+      }, 500);
+      setSearchTimeout(timeout);
+    } else {
+      setIsSearchMode(false);
+      setSearchTimeout(null);
+    }
+  };
+
+  // 検索をクリア
+  const clearSearch = () => {
+    setSearch('');
+    setIsSearchMode(false);
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      setSearchTimeout(null);
+    }
+  };
+
+  // 表示する店舗データを決定
+  const displayStores = isSearchMode ? searchResults : stores;
 
   // 有効な座標を持つ店舗のみをフィルタリング
-  const validStores = stores.filter(store => {
+  const validStores = displayStores.filter(store => {
     const isValid = store.latitude && 
       store.longitude && 
       typeof store.latitude === 'number' && 
@@ -88,20 +121,18 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
       !isNaN(store.latitude) &&
       !isNaN(store.longitude);
     
-    if (!isValid) {
-      console.log('無効な店舗データ:', store);
-    }
-    
     return isValid;
   });
 
-  console.log('有効な店舗数:', validStores.length);
-
   const filteredStores = validStores.filter(store => {
-    const matchesSearch = store.name.toLowerCase().includes(search.toLowerCase()) ||
-                         store.address.toLowerCase().includes(search.toLowerCase());
+    // 検索モードの場合は、テキスト検索結果をそのまま表示
+    if (isSearchMode) {
+      return true;
+    }
+    
+    // 通常モードの場合は、カテゴリフィルターを適用
     const matchesCategory = selectedCategory === 'all' || store.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   });
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -155,8 +186,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
     return (
       <Settings 
         userData={userData}
-        onBackToMap={() => setShowSettings(false)}
-      />
+        onBackToMap={() => setShowSettings(false)}      />
     );
   }
 
@@ -198,31 +228,37 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         <div className="absolute top-4 left-4 right-4 space-y-4 pointer-events-auto">
           {/* ヘッダー */}
           <div className="flex items-center justify-between">
-            {/* 戻るボタン */}
-            <button
-              onClick={onBackToTitle}
-              className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-              <span className="text-gray-800 font-medium">タイトルへ</span>
-            </button>
+           {/* 戻るボタン */}
+          <button
+          onClick={onBackToTitle}
+          className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+>
+          <ArrowLeft className="h-5 w-5 text-gray-600" />
+
+          <span className="hidden md:inline text-gray-800 font-medium">
+          タイトルへ
+          </span>
+          </button>
+
 
             {/* データソース選択 */}
-            <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-              <Layers className="h-4 w-4 text-gray-600" />
-              <span className="text-sm text-gray-600">データソース</span>
-              <select
-                value={dataSource}
-                onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
-                className="text-sm bg-transparent border-none outline-none"
-              >
-                <option value="both">OSM + Google</option>
-                <option value="osm">OSM のみ</option>
-                <option value="google">Google のみ</option>
-              </select>
-            </div>
+          <div className="flex items-center space-x-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg text-sm md:px-4 md:py-3 md:text-base">
+          <Layers className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
 
-            {/* ユーザー情報 - クリック可能に変更 */}
+          <span className="hidden sm:inline text-gray-600">データソース</span>
+
+          <select
+          value={dataSource}
+          onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
+          className="bg-transparent border-none outline-none text-sm md:text-base"
+  >
+          <option value="both">OSM + Google</option>
+          <option value="osm">OSM のみ</option>
+          <option value="google">Google のみ</option>
+          </select>
+          </div>
+
+            {/* ユーザー情報 */}
             {userData && (
               <button
                 onClick={() => setShowSettings(true)}
@@ -232,8 +268,12 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-gray-800">{userData.username}</p>
+                <p className="text-xs font-light text-gray-800 sm:text-sm sm:font-medium md:text-base md:font-semibold">
+                {userData.username}
+                </p>
+                  <span className="hidden md:inline text-gray-800 font-medium">
                   <p className="text-xs text-gray-500">{userData.selectedMethods.length}個の決済方法</p>
+                </span>
                 </div>
               </button>
             )}
@@ -248,9 +288,20 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               type="text"
               placeholder="店舗名や住所で検索..."
               value={search}
+
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-gray-800 placeholder-gray-500"
+              className="w-full pl-12 pr-4 py-2 sm:py-3 md:py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-gray-800 placeholder-gray-500"
+
+              
             />
+            {search && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-12 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-4 w-4 text-gray-400" />
+              </button>
+            )}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -259,22 +310,42 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
             </button>
           </div>
 
-          {/* ローディング・エラー表示 */}
-          {loading && (
-            <div className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 rounded-xl">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="text-blue-600 text-sm">店舗データを読み込み中...</span>
+          {/* 検索モード表示 */}
+          {isSearchMode && (
+            <div className="flex items-center justify-center">
+              <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-xl border border-blue-200">
+                <Search className="h-4 w-4 text-blue-600" />
+                <span className="text-blue-600 text-sm font-medium">
+                  {`検索モード: "${search}"`}
+                </span>
+                <button
+                  onClick={clearSearch}
+                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
 
-          {error && (
+          {/* ローディング・エラー表示 */}
+          {(loading || isSearching) && (
+            <div className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 rounded-xl">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-blue-600 text-sm">
+                {isSearching ? '検索中...' : '店舗データを読み込み中...'}
+              </span>
+            </div>
+          )}
+
+          {(error || searchError) && (
             <div className="flex items-center justify-between px-4 py-3 bg-red-50 rounded-xl">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-red-600 text-sm">{error}</span>
+                <span className="text-red-600 text-sm">{error || searchError}</span>
               </div>
               <button
-                onClick={refetch}
+                onClick={isSearchMode ? clearSearch : refetch}
                 className="p-1 hover:bg-red-100 rounded-lg transition-colors"
               >
                 <RefreshCw className="h-4 w-4 text-red-600" />
@@ -282,34 +353,36 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
             </div>
           )}
 
-          {/* データモード切り替え */}
-          <div className="flex items-center justify-center">
-            <div className="flex items-center space-x-4 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-              <span className={`text-sm font-medium ${!useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
-                デモデータ
-              </span>
-              <button
-                onClick={() => setUseRealData(!useRealData)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                style={{
-                  backgroundColor: useRealData ? '#3B82F6' : '#D1D5DB'
-                }}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    useRealData ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-              <span className={`text-sm font-medium ${useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
-                リアルデータ
-              </span>
+          {/* データモード切り替え（検索モードでない場合のみ表示） */}
+          {!isSearchMode && (
+            <div className="flex items-center justify-center">
+              <div className="flex items-center space-x-4 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
+                <span className={`text-sm font-medium ${!useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
+                  デモデータ
+                </span>
+                <button
+                  onClick={() => setUseRealData(!useRealData)}
+                  className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  style={{
+                    backgroundColor: useRealData ? '#3B82F6' : '#D1D5DB'
+                  }}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      useRealData ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm font-medium ${useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
+                  リアルデータ
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* フィルター */}
-        {showFilters && (
+        {/* フィルター（検索モードでない場合のみ表示） */}
+        {showFilters && !isSearchMode && (
           <div className="absolute top-32 left-4 right-4 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-800">カテゴリフィルター</h3>
@@ -367,21 +440,10 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
             <MapPin className="h-4 w-4 text-blue-500" />
             <span className="text-sm font-medium text-gray-800">
               {filteredStores.length}件の店舗
+              {isSearchMode && (
+                <span className="text-blue-600 ml-1">(検索結果)</span>
+              )}
             </span>
-          </div>
-        </div>
-
-        {/* 検索バー（下部） */}
-        <div className="absolute bottom-4 right-4 w-64 pointer-events-auto">
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Q 検索"
-              className="w-full pl-10 pr-4 py-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-sm text-gray-800 placeholder-gray-500"
-            />
           </div>
         </div>
       </div>

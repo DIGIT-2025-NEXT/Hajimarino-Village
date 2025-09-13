@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Store, PaymentMethod } from '@/types/store';
-import { SAMPLE_STORES } from '@/data/sampleStores';
-import { searchMultipleStoreTypes, getPlaceDetails, GooglePlace, searchStoresByText } from '@/lib/googlePlaces';
+import { searchStoresByText, getPlaceDetails, GooglePlace } from '@/lib/googlePlaces';
 import { usePaymentMethods } from './usePaymentMethods';
 
 // Google Places APIの詳細情報の型定義
@@ -35,30 +34,17 @@ interface OSMPaymentMethod {
   isSupported: boolean;
   verifiedAt: string;
   category: 'qr' | 'nfc' | 'card' | 'ic' | 'cash';
-  // 店舗情報を追加
   storeName?: string;
   storeAddress?: string;
 }
 
-// OSMデータの構造を正しく反映した型定義
-interface OSMPaymentData {
-  id: number;
-  type: string;
-  lat?: number;
-  lng?: number;
-  name: string;
-  address: string;
-  supportedPayments: string[];
-  tags: Record<string, string>;
-}
-
-export const useStores = (lat: number, lng: number, useRealData: boolean = false) => {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const useStoreSearch = (lat: number, lng: number) => {
+  const [searchResults, setSearchResults] = useState<Store[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // OSMから決済方法データを取得
-  const { paymentMethods, loading: paymentLoading, error: paymentError } = usePaymentMethods(lat, lng, 2000);
+  const { paymentMethods } = usePaymentMethods(lat, lng, 2000);
 
   // Google Places APIのデータをStore型に変換
   const convertGooglePlaceToStore = async (place: GooglePlace): Promise<Store> => {
@@ -99,10 +85,9 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
       category: category,
       paymentMethods: osmPaymentMethods.length > 0 ? osmPaymentMethods : getDefaultPaymentMethods(category),
       lastVerified: new Date().toISOString().split('T')[0],
-      trustScore: 'medium', // デフォルト値
+      trustScore: 'medium',
       phoneNumber: details?.formatted_phone_number,
       businessHours: getBusinessHours(details?.opening_hours),
-      // 写真情報を追加
       photos: details?.photos?.map(photo => ({
         photoReference: photo.photo_reference,
         height: photo.height,
@@ -112,7 +97,7 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
     };
   };
 
-  // OSMデータとGoogle Placesデータを照合する関数（改善版）
+  // OSMデータとGoogle Placesデータを照合する関数
   const findOSMPaymentMethods = (
     place: GooglePlace, 
     details: GooglePlaceDetails | null, 
@@ -120,9 +105,6 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
   ): OSMPaymentMethod[] => {
     const storeName = (details?.name || place.name).toLowerCase();
     const storeAddress = (details?.formatted_address || place.vicinity).toLowerCase();
-    
-    console.log(`照合開始: ${storeName} (${storeAddress})`);
-    console.log('利用可能なOSMデータ:', Object.keys(osmData).length, '店舗');
     
     // OSMデータから店舗名や住所で照合
     for (const [storeId, methods] of Object.entries(osmData)) {
@@ -132,10 +114,7 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
         // 店舗名での照合
         if (firstMethod.storeName) {
           const osmName = firstMethod.storeName.toLowerCase();
-          
-          // 店舗名の部分一致で照合
           if (storeName.includes(osmName) || osmName.includes(storeName)) {
-            console.log(`OSMデータと照合成功: ${storeName} <-> ${osmName}`);
             return methods;
           }
         }
@@ -143,23 +122,18 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
         // 住所での照合
         if (firstMethod.storeAddress) {
           const osmAddress = firstMethod.storeAddress.toLowerCase();
-          
-          // 住所の部分一致で照合
           if (storeAddress.includes(osmAddress) || osmAddress.includes(storeAddress)) {
-            console.log(`OSMデータと住所照合成功: ${storeAddress} <-> ${osmAddress}`);
             return methods;
           }
         }
       }
     }
     
-    console.log(`OSMデータとの照合失敗: ${storeName}`);
     return [];
   };
 
   // 店舗カテゴリに応じたデフォルト決済方法
   const getDefaultPaymentMethods = (category: Store['category']): PaymentMethod[] => {
-    // 配列の型を明示的に指定
     const baseMethods: PaymentMethod[] = [
       {
         id: 'cash',
@@ -173,7 +147,7 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
         id: 'visa',
         name: 'Visa',
         icon: '💳',
-        isSupported: true, // ほとんどの店舗で対応
+        isSupported: true,
         verifiedAt: new Date().toISOString(),
         category: 'card'
       },
@@ -181,7 +155,7 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
         id: 'mastercard',
         name: 'Mastercard',
         icon: '💳',
-        isSupported: true, // ほとんどの店舗で対応
+        isSupported: true,
         verifiedAt: new Date().toISOString(),
         category: 'card'
       },
@@ -189,7 +163,7 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
         id: 'jcb',
         name: 'JCB',
         icon: '💳',
-        isSupported: true, // 日本では一般的
+        isSupported: true,
         verifiedAt: new Date().toISOString(),
         category: 'card'
       }
@@ -274,78 +248,51 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
     return baseMethods;
   };
 
-  const fetchStores = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      if (useRealData) {
-        // Google Places APIから実際のデータを取得
-        console.log('Google Places APIから店舗データを取得中...');
-        
-        // 段階的に検索範囲を拡大
-        const searchRadii = [2000, 5000, 10000]; // 2km, 5km, 10km
-        let allPlaces: GooglePlace[] = [];
-        
-        for (const radius of searchRadii) {
-          try {
-            const places = await searchMultipleStoreTypes(lat, lng, radius);
-            allPlaces = [...allPlaces, ...places];
-            
-            // 十分な店舗数が取得できたら停止
-            if (allPlaces.length >= 100) {
-              break;
-            }
-          } catch (error) {
-            console.error(`Error searching with radius ${radius}:`, error);
-          }
-        }
-        
-        // 重複を除去
-        const uniquePlaces = allPlaces.filter((place, index, self) => 
-          index === self.findIndex(p => p.place_id === place.place_id)
-        );
-        
-        // 最大100件に制限
-        const limitedPlaces = uniquePlaces.slice(0, 100);
-        
-        // データを変換
-        const convertedStores = await Promise.all(
-          limitedPlaces.map(convertGooglePlaceToStore)
-        );
-        
-        setStores(convertedStores);
-        console.log(`${convertedStores.length}件の店舗データを取得しました`);
-        
-        // OSMデータの取得状況をログ出力
-        if (paymentError) {
-          console.warn('OSM決済方法データの取得に失敗:', paymentError);
-        } else {
-          console.log(`OSM決済方法データ: ${Object.keys(paymentMethods).length}店舗分を取得`);
-        }
-      } else {
-        // サンプルデータを使用
-        setStores(SAMPLE_STORES);
-        console.log('サンプルデータを使用しています');
-      }
-    } catch (error) {
-      console.error('店舗データの取得に失敗:', error);
-      setError('店舗データの取得に失敗しました');
-      // エラー時はサンプルデータを使用
-      setStores(SAMPLE_STORES);
-    } finally {
-      setLoading(false);
+  // テキスト検索を実行
+  const searchStores = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
     }
-  }, [lat, lng, useRealData, paymentMethods, paymentError]);
 
-  useEffect(() => {
-    fetchStores();
-  }, [fetchStores]);
+    setIsSearching(true);
+    setSearchError(null);
 
-  return { 
-    stores, 
-    loading: loading || paymentLoading, 
-    error: error || paymentError, 
-    refetch: fetchStores 
+    try {
+      console.log('テキスト検索を実行:', query);
+      
+      // Google Places Text Search APIを使用
+      const places = await searchStoresByText(query, lat, lng, 50000);
+      
+      if (places.length === 0) {
+        setSearchResults([]);
+        return;
+      }
+
+      // 最大20件に制限（パフォーマンス考慮）
+      const limitedPlaces = places.slice(0, 20);
+      
+      // データを変換
+      const convertedStores = await Promise.all(
+        limitedPlaces.map(convertGooglePlaceToStore)
+      );
+      
+      setSearchResults(convertedStores);
+      console.log(`${convertedStores.length}件の検索結果を取得しました`);
+      
+    } catch (error) {
+      console.error('テキスト検索に失敗:', error);
+      setSearchError('検索に失敗しました');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [lat, lng, paymentMethods]);
+
+  return {
+    searchResults,
+    isSearching,
+    searchError,
+    searchStores
   };
 };
