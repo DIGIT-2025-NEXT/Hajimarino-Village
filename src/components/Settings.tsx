@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   User, 
@@ -44,10 +44,20 @@ interface SettingsProps {
 export default function Settings({ userData, onBackToMap }: SettingsProps) {
   const { signOut } = useAuthContext();
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => JSON.parse(localStorage.getItem("darkMode") || "false"));
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showLocation, setShowLocation] = useState(true);
   const [showPaymentMethods, setShowPaymentMethods] = useState(true);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
+  }, [darkMode]);
+
 
   const handleLogout = async () => {
     try {
