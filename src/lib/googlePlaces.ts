@@ -73,6 +73,41 @@ export const searchNearbyStores = async (
   }
 };
 
+// テキスト検索で店舗を検索（新機能）
+export const searchStoresByText = async (
+  query: string,
+  lat?: number,
+  lng?: number,
+  radius: number = 50000
+): Promise<GooglePlace[]> => {
+  try {
+    let apiUrl = `/api/places/search?query=${encodeURIComponent(query)}`;
+    
+    if (lat && lng) {
+      apiUrl += `&lat=${lat}&lng=${lng}&radius=${radius}`;
+    }
+
+    console.log('Searching stores by text:', query);
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      throw new Error(`Google Places API error: ${data.status}`);
+    }
+    
+    return data.results || [];
+  } catch (error) {
+    console.error('Google Places Text Search API error:', error);
+    return [];
+  }
+};
+
 // 店舗の詳細情報を取得（Next.js API Route経由）
 export const getPlaceDetails = async (placeId: string): Promise<GooglePlaceDetails | null> => {
   try {

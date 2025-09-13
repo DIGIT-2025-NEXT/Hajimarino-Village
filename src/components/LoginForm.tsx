@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, MapPin, CreditCard, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, MapPin, CreditCard, Sparkles, ArrowLeft } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import PaymentMethodSelection from './PaymentMethodSelection';
 
@@ -10,9 +10,10 @@ interface LoginFormProps {
   currentMode: 'login' | 'register';
   onLoginSuccess: () => void;
   onRegistrationComplete: (userData: { email: string; username: string; selectedMethods: string[]}) => void;
+  onBackToTitle: () => void;
 }
 
-export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, onRegistrationComplete }: LoginFormProps) {
+export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, onRegistrationComplete, onBackToTitle }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -147,6 +148,17 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/50">
           {/* ヘッダー */}
           <div className="text-center mb-8">
+             {/* 戻るボタン */}
+             <div className="flex justify-start mb-4">
+              <button
+                onClick={onBackToTitle}
+                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200 group"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform duration-200" />
+                <span className="text-sm font-medium">タイトルへ</span>
+              </button>
+            </div>
+
             <div className="flex items-center justify-center mb-4">
               <div className="relative">
                 <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">

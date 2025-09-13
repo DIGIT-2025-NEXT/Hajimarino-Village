@@ -102,6 +102,7 @@ export default function Home() {
           onModeChange={setMode}
           onLoginSuccess={handleLoginSuccess}
           onRegistrationComplete={handleRegistrationComplete}
+          onBackToTitle={handleBackToTitle}
         />
       </main>
     );
