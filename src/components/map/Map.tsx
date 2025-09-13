@@ -228,29 +228,35 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         <div className="absolute top-4 left-4 right-4 space-y-4 pointer-events-auto">
           {/* ヘッダー */}
           <div className="flex items-center justify-between">
-            {/* 戻るボタン */}
-            <button
-              onClick={onBackToTitle}
-              className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-              <span className="text-gray-800 font-medium">タイトルへ</span>
-            </button>
+           {/* 戻るボタン */}
+          <button
+          onClick={onBackToTitle}
+          className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+>
+          <ArrowLeft className="h-5 w-5 text-gray-600" />
+
+          <span className="hidden md:inline text-gray-800 font-medium">
+          タイトルへ
+          </span>
+          </button>
+
 
             {/* データソース選択 */}
-            <div className="flex items-center space-x-2 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-              <Layers className="h-4 w-4 text-gray-600" />
-              <span className="text-sm text-gray-600">データソース</span>
-              <select
-                value={dataSource}
-                onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
-                className="text-sm bg-transparent border-none outline-none"
-              >
-                <option value="both">OSM + Google</option>
-                <option value="osm">OSM のみ</option>
-                <option value="google">Google のみ</option>
-              </select>
-            </div>
+          <div className="flex items-center space-x-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg text-sm md:px-4 md:py-3 md:text-base">
+          <Layers className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+
+          <span className="hidden sm:inline text-gray-600">データソース</span>
+
+          <select
+          value={dataSource}
+          onChange={(e) => setDataSource(e.target.value as 'google' | 'osm' | 'both')}
+          className="bg-transparent border-none outline-none text-sm md:text-base"
+  >
+          <option value="both">OSM + Google</option>
+          <option value="osm">OSM のみ</option>
+          <option value="google">Google のみ</option>
+          </select>
+          </div>
 
             {/* ユーザー情報 */}
             {userData && (
@@ -262,8 +268,12 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-gray-800">{userData.username}</p>
+                <p className="text-xs font-light text-gray-800 sm:text-sm sm:font-medium md:text-base md:font-semibold">
+                {userData.username}
+                </p>
+                  <span className="hidden md:inline text-gray-800 font-medium">
                   <p className="text-xs text-gray-500">{userData.selectedMethods.length}個の決済方法</p>
+                </span>
                 </div>
               </button>
             )}
@@ -278,8 +288,11 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               type="text"
               placeholder="店舗名や住所で検索..."
               value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-12 pr-12 py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-gray-800 placeholder-gray-500"
+
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-2 sm:py-3 md:py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-gray-800 placeholder-gray-500"
+
+              
             />
             {search && (
               <button
