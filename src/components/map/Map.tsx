@@ -186,8 +186,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
     return (
       <Settings 
         userData={userData}
-        onBackToMap={() => setShowSettings(false)}
-      />
+        onBackToMap={() => setShowSettings(false)}      />
     );
   }
 
