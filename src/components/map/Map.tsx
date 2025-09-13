@@ -79,6 +79,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
 
   // 検索入力のハンドリング（デバウンス付き）
   const handleSearchChange = (value: string) => {
+    console.log('検索入力:', value); // デバッグログ追加
     setSearch(value);
     
     // 既存のタイムアウトをクリア
@@ -87,9 +88,11 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
     }
     
     if (value.trim()) {
+      console.log('検索モードに切り替え'); // デバッグログ追加
       setIsSearchMode(true);
       // 500ms後に検索を実行
       const timeout = setTimeout(() => {
+        console.log('検索実行:', value); // デバッグログ追加
         searchStores(value);
       }, 500);
       setSearchTimeout(timeout);
@@ -289,7 +292,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               placeholder="店舗名や住所で検索..."
               value={search}
 
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-12 pr-4 py-2 sm:py-3 md:py-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg text-gray-800 placeholder-gray-500"
 
               
