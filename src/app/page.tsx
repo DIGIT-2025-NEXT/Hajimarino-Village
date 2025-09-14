@@ -6,6 +6,7 @@ import { TitleScreen } from '@/components/Kaishi';
 import LoginForm from '@/components/LoginForm';
 import PaymentMethodSelection from '@/components/PaymentMethodSelection';
 import Map from '@/components/map/Map';
+import LoginPromptModal from '@/components/map/LoginPromptModal';
 
 type AppState = 'title' | 'login' | 'payment' | 'map';
 type UserMode = 'authenticated' | 'guest';
@@ -16,6 +17,7 @@ export default function Home() {
   const [userMode, setUserMode] = useState<UserMode>('authenticated'); // ユーザーモードを追加
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   //ローディング中
   if (loading) {
@@ -62,6 +64,12 @@ export default function Home() {
     setUserMode('authenticated'); // タイトルに戻る際は認証モードに戻す
   };
 
+  // ログイン画面への遷移を追加
+  const handleGoToLogin = () => {
+    setAppState('login');
+    setUserMode('authenticated');
+  };
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -83,6 +91,7 @@ export default function Home() {
             selectedMethods: user.user_metadata?.selectedMethods || []
           }}
           onBackToTitle={handleBackToTitle}
+          onGoToLogin={handleGoToLogin}
         /> 
       </main>
     );
@@ -99,6 +108,7 @@ export default function Home() {
             selectedMethods: []
           }}
           onBackToTitle={handleBackToTitle}
+          onGoToLogin={handleGoToLogin} // ログイン遷移のハンドラーを追加
         /> 
       </main>
     );
@@ -157,6 +167,13 @@ export default function Home() {
           selectedMethods: user?.user_metadata?.selectedMethods || []
         }}
         onBackToTitle={handleBackToTitle}
+        onGoToLogin={handleGoToLogin}
+      />
+      {/* ログインプロンプトモーダル */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        onGoToLogin={handleGoToLogin}
       />
     </main>
   );
