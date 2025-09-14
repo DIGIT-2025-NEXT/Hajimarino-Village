@@ -8,10 +8,12 @@ import PaymentMethodSelection from '@/components/PaymentMethodSelection';
 import Map from '@/components/map/Map';
 
 type AppState = 'title' | 'login' | 'payment' | 'map';
+type UserMode = 'authenticated' | 'guest';
 
 export default function Home() {
   const { user, loading, signOut } = useAuthContext();
   const [appState, setAppState] = useState<AppState>('title');
+  const [userMode, setUserMode] = useState<UserMode>('authenticated'); // ユーザーモードを追加
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
 
@@ -26,16 +28,19 @@ export default function Home() {
 
   const handleLoginStart = () => {
     setAppState('login');
+    setUserMode('authenticated');
   };
 
   const handleGuestStart = () => {
     // ゲストで始める場合は直接マップ画面に遷移
     setAppState('map');
+    setUserMode('guest'); // ゲストモードに設定
   };
 
   const handleLoginSuccess = () => {
     // ログイン成功後、地図画面に遷移
     setAppState('map');
+    setUserMode('authenticated');
   };
 
   const handleRegistrationComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
@@ -43,28 +48,32 @@ export default function Home() {
     setShowPaymentSelection(false);
     // 新規登録完了後、地図画面に遷移
     setAppState('map');
+    setUserMode('authenticated');
   };
 
   const handlePaymentComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
     console.log('決済方法選択完了:', userData);
     setAppState('map');
+    setUserMode('authenticated');
   };
 
   const handleBackToTitle = () => {
     setAppState('title');
+    setUserMode('authenticated'); // タイトルに戻る際は認証モードに戻す
   };
 
   const handleLogout = async () => {
     try {
       await signOut();
       setAppState('title');
+      setUserMode('authenticated');
     } catch (error) {
       console.error('ログアウトエラー:', error);
     }
   };
 
   // ユーザーがログイン済みで、地図画面を表示する場合
-  if (user && appState === 'map') {
+  if (user && appState === 'map' && userMode === 'authenticated') {
     return (
       <main className="h-screen">
         <Map 
@@ -72,6 +81,22 @@ export default function Home() {
             email: user.email || '',
             username: user.user_metadata.username || '',
             selectedMethods: user.user_metadata?.selectedMethods || []
+          }}
+          onBackToTitle={handleBackToTitle}
+        /> 
+      </main>
+    );
+  }
+
+  // ゲストユーザーで地図画面を表示する場合
+  if (appState === 'map' && userMode === 'guest') {
+    return (
+      <main className="h-screen">
+        <Map 
+          userData={{
+            email: '',
+            username: 'ゲストユーザー',
+            selectedMethods: []
           }}
           onBackToTitle={handleBackToTitle}
         /> 
@@ -122,7 +147,7 @@ export default function Home() {
     );
   }
 
-  // デフォルトは地図画面（ゲストユーザーも含む）
+  // デフォルトは地図画面（フォールバック）
   return (
     <main className="h-screen">
       <Map 
