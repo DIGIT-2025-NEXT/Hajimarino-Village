@@ -56,7 +56,7 @@ interface MapProps {
   onGoToLogin?: () => void; // 追加
 }
 
-export default function Map({ children, userData, onBackToTitle }: MapProps) {
+export default function Map({ children, userData, onBackToTitle, onGoToLogin }: MapProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
@@ -184,10 +184,32 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
     }
   };
 
+  // お気に入り機能のクリック処理
+  const handleFavoriteClick = () => {
+    if (isGuestUser) {
+      setShowLoginPrompt(true);
+    } else {
+      setShowFavorites(true);
+    }
+  };
+
+  // お気に入りの追加/削除処理
+  const handleToggleFavorite = (storeId: string) => {
+    if (isGuestUser) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    toggleFavorite(storeId);
+  };
+
   // ログイン画面への遷移
   const handleGoToLogin = () => {
     setShowLoginPrompt(false);
-    onBackToTitle(); // タイトル画面に戻る
+    if (onGoToLogin) {
+      onGoToLogin();
+    } else {
+      onBackToTitle(); // フォールバック
+    }
   };
 
   if (loadError) {
@@ -447,7 +469,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         {/* お気に入り店舗 */}
         {favoriteStores.length > 0 && (
           <button
-            onClick={() => setShowFavorites(true)}
+            onClick={handleFavoriteClick}
             className="absolute bottom-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto hover:bg-white/95 transition-colors"
           >
             <div className="flex items-center space-x-2 mb-2">
@@ -484,8 +506,9 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         <StoreDetailModal
           store={selectedStore}
           onClose={() => setSelectedStore(null)}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={handleToggleFavorite}
           isFavorite={favoriteStores.includes(selectedStore.id)}
+          isGuestUser={isGuestUser}
         />
       )}
 
@@ -498,7 +521,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
           setSelectedStore(store);
           setShowFavorites(false);
         }}
-        onRemoveFavorite={toggleFavorite}
+        onRemoveFavorite={handleToggleFavorite}
       />
 
       {/* ログインプロンプトモーダル */}
