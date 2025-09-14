@@ -414,7 +414,7 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
 
         {/* お気に入り店舗 */}
         {favoriteStores.length > 0 && (
-          <div className="absolute top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
+          <div className="absolute bottom-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
             <div className="flex items-center space-x-2 mb-2">
               <Heart className="h-4 w-4 text-red-500" />
               <span className="text-sm font-medium text-gray-800">お気に入り</span>
