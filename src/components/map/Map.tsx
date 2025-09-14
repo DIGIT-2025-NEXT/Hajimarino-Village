@@ -21,9 +21,11 @@ import {
   RefreshCw,
   ToggleLeft,
   ToggleRight,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import Settings from '../Settings';
+import FavoriteListModal from './FavoriteListModal';
 
 // 北九州市の中心座標（小倉駅周辺）
 const CENTER = {
@@ -70,6 +72,9 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
   // 検索モードの状態管理
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // お気に入り一覧表示モーダルの状態管理
+  const [showFavorites, setShowFavorites] = useState(false);
 
   // カスタムフックを使用して店舗データを取得
   const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
@@ -157,6 +162,11 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
         : [...prev, storeId]
     );
   };
+
+  // お気に入り店舗の詳細情報を取得
+  const favoriteStoreDetails = favoriteStores
+    .map(storeId => stores.find(store => store.id === storeId))
+    .filter((store): store is Store => store !== undefined);
 
   if (loadError) {
     return (
@@ -414,27 +424,23 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
 
         {/* お気に入り店舗 */}
         {favoriteStores.length > 0 && (
-          <div className="absolute top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto">
+          <button
+            onClick={() => setShowFavorites(true)}
+            className="absolute bottom-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg pointer-events-auto hover:bg-white/95 transition-colors"
+          >
             <div className="flex items-center space-x-2 mb-2">
               <Heart className="h-4 w-4 text-red-500" />
               <span className="text-sm font-medium text-gray-800">お気に入り</span>
             </div>
-            <div className="space-y-1">
-              {favoriteStores.slice(0, 3).map((storeId) => {
-                const store = stores.find(s => s.id === storeId);
-                return store ? (
-                  <div key={storeId} className="text-xs text-gray-600 truncate">
-                    {store.name}
-                  </div>
-                ) : null;
-              })}
-              {favoriteStores.length > 3 && (
-                <div className="text-xs text-gray-400">
-                  +{favoriteStores.length - 3}件
-                </div>
-              )}
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-800">
+                {favoriteStores.length}
+              </div>
+              <div className="text-xs text-gray-500">
+                件登録済み
+              </div>
             </div>
-          </div>
+          </button>
         )}
 
         {/* 店舗数表示 */}
@@ -460,6 +466,18 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
           isFavorite={favoriteStores.includes(selectedStore.id)}
         />
       )}
+
+      {/* お気に入り一覧モーダル */}
+      <FavoriteListModal
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        favoriteStores={favoriteStoreDetails}
+        onStoreSelect={(store) => {
+          setSelectedStore(store);
+          setShowFavorites(false);
+        }}
+        onRemoveFavorite={toggleFavorite}
+      />
 
       {children}
     </div>
