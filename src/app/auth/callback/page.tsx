@@ -1,12 +1,27 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 import AuthConfirmation from '@/components/AuthConfirmation';
 import AuthError from '@/components/AuthError';
 
-export default function AuthCallback() {
+// ローディングコンポーネント
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600 text-lg">認証を確認中...</p>
+        <p className="text-gray-400 text-sm mt-2">しばらくお待ちください</p>
+      </div>
+    </div>
+  );
+}
+
+// メインの認証コールバックコンポーネント
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, updateUserProfile } = useAuthContext();
@@ -95,15 +110,7 @@ export default function AuthCallback() {
   };
 
   if (loading || isProcessing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">認証を確認中...</p>
-          <p className="text-gray-400 text-sm mt-2">しばらくお待ちください</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error) {
@@ -130,5 +137,14 @@ export default function AuthCallback() {
         <p className="text-gray-400 text-sm mt-2">自動的にリダイレクトされます</p>
       </div>
     </div>
+  );
+}
+
+// メインのページコンポーネント（Suspenseでラップ）
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
