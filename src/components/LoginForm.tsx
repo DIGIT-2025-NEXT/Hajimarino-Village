@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, MapPin, CreditCard, Sparkles, ArrowLeft } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import PaymentMethodSelection from './PaymentMethodSelection';
+import EmailVerificationSent from './EmailVerificationSent';
 
 interface LoginFormProps {
   onModeChange: (mode: 'login' | 'register') => void;
@@ -21,7 +22,8 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
-  const [tempUserData, setTempUserData] = useState<{ email: string; username: string } | null>(null);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [tempUserData, setTempUserData] = useState<{ email: string; username: string; selectedMethods: string[] } | null>(null);
 
   const { signIn, signUp, updateUserProfile } = useAuthContext();
 
@@ -32,13 +34,13 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
     
     try {
       if (currentMode === 'register') {
-        // 新規登録を直接実行
+        // 新規登録を実行
         const { error } = await signUp(email, password, username);
         if (error) {
           setError(`登録に失敗しました: ${error.message}`);
         } else {
           // 登録成功後、決済方法選択画面に遷移
-          setTempUserData({ email, username });
+          setTempUserData({ email, username, selectedMethods: [] });
           setShowPaymentSelection(true);
         }
       } else {
@@ -64,54 +66,16 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
     setIsLoading(true);
     
     try {
-      // 決済方法選択後にSupabaseに登録
-      const { error } = await signUp(tempUserData.email, password, tempUserData.username);
+      // 決済方法を一時保存
+      setTempUserData(prev => prev ? { ...prev, selectedMethods: userData.selectedMethods } : null);
       
-      if (error) {
-        setError('登録に失敗しました。メールアドレスが既に使用されている可能性があります。');
-        setShowPaymentSelection(false);
-        setIsLoading(false);
-        return;
-      }
+      // 認証メール送信完了画面を表示
+      setShowPaymentSelection(false);
+      setShowEmailVerification(true);
       
-      // 登録成功後、認証セッションが確立されるまで待機
-      console.log('新規登録が完了しました。決済方法を保存中...');
+      console.log('新規登録が完了しました。認証メールが送信されました。');
+      console.log('選択された決済方法:', userData.selectedMethods);
       
-      // 認証セッションの確立を待つ（最大10秒）
-      let attempts = 0;
-      const maxAttempts = 10;
-      
-      while (attempts < maxAttempts) {
-        try {
-          const { error: updateError } = await updateUserProfile({
-            selectedMethods: userData.selectedMethods
-          });
-          
-          if (!updateError) {
-            console.log('決済方法の保存に成功しました');
-            break;
-          }
-          
-          // エラーの場合は1秒待ってからリトライ
-          console.log(`決済方法の保存を試行中... (${attempts + 1}/${maxAttempts})`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
-        } catch (err) {
-          console.log(`決済方法の保存を試行中... (${attempts + 1}/${maxAttempts})`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          attempts++;
-        }
-      }
-      
-      if (attempts >= maxAttempts) {
-        console.log('決済方法の保存に失敗しました。設定画面で再設定してください。');
-      }
-      
-      onRegistrationComplete({
-        email: tempUserData.email,
-        username: tempUserData.username,
-        selectedMethods: userData.selectedMethods
-      });
     } catch (err) {
       setError('予期しないエラーが発生しました。');
       setShowPaymentSelection(false);
@@ -120,6 +84,45 @@ export default function LoginForm({ onModeChange, currentMode, onLoginSuccess, o
     }
   };
 
+  const handleResendEmail = async () => {
+    if (!tempUserData) return;
+    
+    setIsLoading(true);
+    try {
+      // メール再送信（同じメールアドレスで再度登録を試行）
+      const { error } = await signUp(tempUserData.email, password, tempUserData.username);
+      if (error) {
+        setError('メールの再送信に失敗しました。');
+      } else {
+        setError('');
+        // 成功メッセージを表示（簡易版）
+        alert('認証メールを再送信しました。');
+      }
+    } catch (err) {
+      setError('メールの再送信に失敗しました。');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setShowEmailVerification(false);
+    setTempUserData(null);
+    onModeChange('login');
+  };
+
+  // 認証メール送信完了画面
+  if (showEmailVerification && tempUserData) {
+    return (
+      <EmailVerificationSent
+        email={tempUserData.email}
+        onBackToLogin={handleBackToLogin}
+        onResendEmail={handleResendEmail}
+      />
+    );
+  }
+
+  // 決済方法選択画面
   if (showPaymentSelection && tempUserData) {
     return (
       <PaymentMethodSelection
