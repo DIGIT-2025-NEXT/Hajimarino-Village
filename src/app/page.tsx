@@ -6,14 +6,18 @@ import { TitleScreen } from '@/components/Kaishi';
 import LoginForm from '@/components/LoginForm';
 import PaymentMethodSelection from '@/components/PaymentMethodSelection';
 import Map from '@/components/map/Map';
+import LoginPromptModal from '@/components/map/LoginPromptModal';
 
 type AppState = 'title' | 'login' | 'payment' | 'map';
+type UserMode = 'authenticated' | 'guest';
 
 export default function Home() {
   const { user, loading, signOut } = useAuthContext();
   const [appState, setAppState] = useState<AppState>('title');
+  const [userMode, setUserMode] = useState<UserMode>('authenticated'); // ユーザーモードを追加
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showPaymentSelection, setShowPaymentSelection] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   //ローディング中
   if (loading) {
@@ -26,15 +30,19 @@ export default function Home() {
 
   const handleLoginStart = () => {
     setAppState('login');
+    setUserMode('authenticated');
   };
 
   const handleGuestStart = () => {
-    setAppState('payment');
+    // ゲストで始める場合は直接マップ画面に遷移
+    setAppState('map');
+    setUserMode('guest'); // ゲストモードに設定
   };
 
   const handleLoginSuccess = () => {
     // ログイン成功後、地図画面に遷移
     setAppState('map');
+    setUserMode('authenticated');
   };
 
   const handleRegistrationComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
@@ -42,28 +50,38 @@ export default function Home() {
     setShowPaymentSelection(false);
     // 新規登録完了後、地図画面に遷移
     setAppState('map');
+    setUserMode('authenticated');
   };
 
   const handlePaymentComplete = (userData: { email: string; username: string; selectedMethods: string[] }) => {
     console.log('決済方法選択完了:', userData);
     setAppState('map');
+    setUserMode('authenticated');
   };
 
   const handleBackToTitle = () => {
     setAppState('title');
+    setUserMode('authenticated'); // タイトルに戻る際は認証モードに戻す
+  };
+
+  // ログイン画面への遷移を追加
+  const handleGoToLogin = () => {
+    setAppState('login');
+    setUserMode('authenticated');
   };
 
   const handleLogout = async () => {
     try {
       await signOut();
       setAppState('title');
+      setUserMode('authenticated');
     } catch (error) {
       console.error('ログアウトエラー:', error);
     }
   };
 
   // ユーザーがログイン済みで、地図画面を表示する場合
-  if (user && appState === 'map') {
+  if (user && appState === 'map' && userMode === 'authenticated') {
     return (
       <main className="h-screen">
         <Map 
@@ -73,6 +91,24 @@ export default function Home() {
             selectedMethods: user.user_metadata?.selectedMethods || []
           }}
           onBackToTitle={handleBackToTitle}
+          onGoToLogin={handleGoToLogin}
+        /> 
+      </main>
+    );
+  }
+
+  // ゲストユーザーで地図画面を表示する場合
+  if (appState === 'map' && userMode === 'guest') {
+    return (
+      <main className="h-screen">
+        <Map 
+          userData={{
+            email: '',
+            username: 'ゲストユーザー',
+            selectedMethods: []
+          }}
+          onBackToTitle={handleBackToTitle}
+          onGoToLogin={handleGoToLogin} // ログイン遷移のハンドラーを追加
         /> 
       </main>
     );
@@ -121,16 +157,23 @@ export default function Home() {
     );
   }
 
-  // デフォルトは地図画面
+  // デフォルトは地図画面（フォールバック）
   return (
     <main className="h-screen">
       <Map 
         userData={{
           email: user?.email || '',
-          username: user?.user_metadata?.username || '',
+          username: user?.user_metadata?.username || 'ゲストユーザー',
           selectedMethods: user?.user_metadata?.selectedMethods || []
         }}
         onBackToTitle={handleBackToTitle}
+        onGoToLogin={handleGoToLogin}
+      />
+      {/* ログインプロンプトモーダル */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        onGoToLogin={handleGoToLogin}
       />
     </main>
   );
