@@ -134,19 +134,15 @@ export default function PaymentMethodSelection({ onBack, onComplete, onRegistrat
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const handleComplete = async () => {
-    if (selectedMethods.length === 0) {
-      alert('少なくとも1つの決済方法を選択してください');
-      return;
-    }
-
-    setIsLoading(true);
-    const userDataToPass = userData || { email: '', username: '' };
+  const handleComplete = () => {
+    // ローカルストレージに一時保存
+    localStorage.setItem('tempSelectedMethods', JSON.stringify(selectedMethods));
     
-    setTimeout(() => {
-      setIsLoading(false);
-      onRegistrationComplete({ ...userDataToPass, selectedMethods });
-    }, 1000);
+    onComplete({
+      email: userData?.email || '',
+      username: userData?.username || '',
+      selectedMethods: selectedMethods
+    });
   };
 
   const toggleMethod = (methodId: string) => {
