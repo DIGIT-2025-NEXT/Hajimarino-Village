@@ -419,20 +419,13 @@ export default function Map({ children, userData, onBackToTitle }: MapProps) {
               <Heart className="h-4 w-4 text-red-500" />
               <span className="text-sm font-medium text-gray-800">お気に入り</span>
             </div>
-            <div className="space-y-1">
-              {favoriteStores.slice(0, 3).map((storeId) => {
-                const store = stores.find(s => s.id === storeId);
-                return store ? (
-                  <div key={storeId} className="text-xs text-gray-600 truncate">
-                    {store.name}
-                  </div>
-                ) : null;
-              })}
-              {favoriteStores.length > 3 && (
-                <div className="text-xs text-gray-400">
-                  +{favoriteStores.length - 3}件
-                </div>
-              )}
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-800">
+                {favoriteStores.length}
+              </div>
+              <div className="text-xs text-gray-500">
+                件登録済み
+              </div>
             </div>
           </div>
         )}
