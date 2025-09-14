@@ -29,7 +29,8 @@ export default function Home() {
   };
 
   const handleGuestStart = () => {
-    setAppState('payment');
+    // ゲストで始める場合は直接マップ画面に遷移
+    setAppState('map');
   };
 
   const handleLoginSuccess = () => {
@@ -121,13 +122,13 @@ export default function Home() {
     );
   }
 
-  // デフォルトは地図画面
+  // デフォルトは地図画面（ゲストユーザーも含む）
   return (
     <main className="h-screen">
       <Map 
         userData={{
           email: user?.email || '',
-          username: user?.user_metadata?.username || '',
+          username: user?.user_metadata?.username || 'ゲストユーザー',
           selectedMethods: user?.user_metadata?.selectedMethods || []
         }}
         onBackToTitle={handleBackToTitle}
