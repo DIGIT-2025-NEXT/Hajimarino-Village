@@ -26,13 +26,15 @@ interface StoreDetailModalProps {
   onClose: () => void;
   onToggleFavorite?: (storeId: string) => void;
   isFavorite?: boolean;
+  isGuestUser?: boolean; // ゲストユーザーかどうかのフラグを追加
 }
 
 export default function StoreDetailModal({ 
   store, 
   onClose, 
   onToggleFavorite, 
-  isFavorite = false 
+  isFavorite = false,
+  isGuestUser = false
 }: StoreDetailModalProps) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
@@ -231,14 +233,13 @@ export default function StoreDetailModal({
             </div>
 
             {/* アクションボタン - コンパクトに */}
-            <div className="flex items-center space-x-2 mt-3">
-              {/* 写真プレビューボタン */}
+            <div className="flex items-center space-x-2 mb-4">
               {store.photos && store.photos.length > 0 && (
                 <button
                   onClick={() => setShowPhotoPreview(true)}
-                  className="flex items-center space-x-1 px-3 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
+                  className="flex items-center space-x-1 px-3 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-all duration-300 text-sm"
                 >
-                  <Eye className="h-3 w-3" />
+                  <ImageIcon className="h-3 w-3" />
                   <span className="font-medium">
                     写真を見る ({store.photos.length})
                   </span>
@@ -249,14 +250,18 @@ export default function StoreDetailModal({
                 <button
                   onClick={handleToggleFavorite}
                   className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-all duration-300 text-sm ${
-                    isFavorite
+                    isGuestUser
+                      ? 'bg-gray-500/20 text-gray-300 cursor-not-allowed'
+                      : isFavorite
                       ? 'bg-red-500/20 text-red-100 hover:bg-red-500/30'
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
+                  disabled={isGuestUser}
+                  title={isGuestUser ? 'ログイン後に使用できます' : ''}
                 >
-                  <Heart className={`h-3 w-3 ${isFavorite ? 'fill-current' : ''}`} />
+                  <Heart className={`h-3 w-3 ${isFavorite && !isGuestUser ? 'fill-current' : ''}`} />
                   <span className="font-medium">
-                    {isFavorite ? 'お気に入り済み' : 'お気に入り'}
+                    {isGuestUser ? 'お気に入り（要ログイン）' : isFavorite ? 'お気に入り済み' : 'お気に入り'}
                   </span>
                 </button>
               )}
