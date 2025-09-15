@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, CreditCard, Smartphone, Users, ArrowRight, LogOut } from "lucide-react";
+import { MapPin, CreditCard, Smartphone, Users, ArrowRight } from "lucide-react";
 
 type TitleScreenProps = {
   onLoginStart: () => void;
@@ -64,18 +64,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-400/10 to-blue-400/10 rounded-full blur-3xl"></div>
       </div>
 
-      {/* ログアウトボタン */}
-      {isLoggedIn && onLogout && (
-        <div className="absolute top-6 right-6 z-10">
-          <button
-            onClick={onLogout}
-            className="flex items-center space-x-2 px-4 py-2 bg-white/90 backdrop-blur-sm text-red-600 rounded-full shadow-lg hover:bg-red-50 hover:shadow-xl transition-all duration-300 hover:scale-105"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="font-medium">ログアウト</span>
-          </button>
-        </div>
-      )}
+      {/* ログアウトボタンのセクションを削除 */}
 
       {/* メインコンテンツ */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-12">
