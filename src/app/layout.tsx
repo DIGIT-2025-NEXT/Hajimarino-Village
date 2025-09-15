@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "PayMapKitaQ - 決済対応店舗マップ",
   description: "北九州市の決済対応店舗を検索できるマップアプリケーション",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/android-launchericon-192-192.png",
+    apple: "/icons/android-launchericon-192-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
