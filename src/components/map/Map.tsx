@@ -15,15 +15,9 @@ import {
   User, 
   Settings as SettingsIcon,
   Heart,
-  Star,
-  Navigation,
   Layers,
   RefreshCw,
-  ToggleLeft,
-  ToggleRight,
   X,
-  Trash2,
-  LogIn
 } from 'lucide-react';
 import Settings from '../Settings';
 import FavoriteListModal from './FavoriteListModal';
