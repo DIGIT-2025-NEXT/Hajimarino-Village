@@ -5,7 +5,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'paypay',
     name: 'PayPay',
     icon: '/paypay.png',
-    category: 'qr',
+    category: 'qr' as const,
     color: 'from-blue-500 to-blue-600',
     description: 'QRコード決済'
   },
@@ -13,7 +13,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'rakuten-pay',
     name: '楽天ペイ',
     icon: '/rakutenpay.png',
-    category: 'qr',
+    category: 'qr' as const,
     color: 'from-red-500 to-red-600',
     description: 'QRコード決済'
   },
@@ -22,7 +22,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'google-pay',
     name: 'Google Pay',
     icon: '/googlepay.png',
-    category: 'nfc',
+    category: 'nfc' as const,
     color: 'from-blue-500 to-blue-700',
     description: 'NFC決済'
   },
@@ -30,7 +30,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'apple-pay',
     name: 'Apple Pay',
     icon: '/applepay.png',
-    category: 'nfc',
+    category: 'nfc' as const,
     color: 'from-gray-600 to-gray-800',
     description: 'NFC決済'
   },
@@ -39,7 +39,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'credit-card',
     name: 'クレジットカード',
     icon: '/credit.png',
-    category: 'card',
+    category: 'card' as const,
     color: 'from-blue-600 to-blue-800',
     description: 'クレジットカード'
   },
@@ -48,7 +48,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'suica',
     name: 'Suica',
     icon: '/suica.png',
-    category: 'ic',
+    category: 'ic' as const,
     color: 'from-red-500 to-red-600',
     description: '交通系IC'
   },
@@ -56,7 +56,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'pasmo',
     name: 'PASMO',
     icon: '/pasmo.png',
-    category: 'ic',
+    category: 'ic' as const,
     color: 'from-blue-500 to-blue-600',
     description: '交通系IC'
   },
@@ -64,7 +64,7 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'nimoca',
     name: 'nimoca',
     icon: '/nimoca.png',
-    category: 'ic',
+    category: 'ic' as const,
     color: 'from-green-500 to-green-600',
     description: '交通系IC'
   },
@@ -73,14 +73,17 @@ export const PAYMENT_METHODS_MASTER = [
     id: 'cash',
     name: '現金',
     icon: '/genkin.png',
-    category: 'cash',
+    category: 'cash' as const,
     color: 'from-gray-500 to-gray-600',
     description: '現金決済'
   }
 ];
 
+// カテゴリの型定義
+export type PaymentCategory = 'qr' | 'nfc' | 'card' | 'ic' | 'cash';
+
 // カテゴリのアイコンと色
-export const CATEGORY_INFO = {
+export const CATEGORY_INFO: Record<PaymentCategory, CategoryInfo> = {
   qr: { 
     icon: 'QrCode', 
     color: 'from-blue-500 to-blue-600', 
@@ -118,7 +121,7 @@ export interface PaymentMethod {
   id: string;
   name: string;
   icon: string;
-  category: string;
+  category: PaymentCategory;
   color: string;
   description: string;
 }

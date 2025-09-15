@@ -7,36 +7,25 @@ import {
   User, 
   Bell, 
   Shield, 
-  Globe, 
   HelpCircle, 
   LogOut,
   ChevronRight,
-  Moon,
-  Sun,
-  Volume2,
-  VolumeX,
-  MapPin,
   CreditCard,
   Eye,
-  EyeOff,
   Smartphone,
   Wallet,
   QrCode,
   Zap,
-  Edit3
+  Edit3,
+  Save,
+  X,
+  Check
 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { PAYMENT_METHODS_MASTER, CATEGORY_INFO } from '@/data/paymentMethods';
+import { PAYMENT_METHODS_MASTER, CATEGORY_INFO, PaymentMethod, PaymentCategory } from '@/data/paymentMethods';
+import PaymentMethodEditModal from './PaymentMethodEditModal';
 
-// 決済方法の型定義
-interface PaymentMethod {
-  id: string;
-  name: string;
-  icon: string;
-  category: string;
-  color: string;
-  description: string;
-}
+// ローカルのPaymentMethod型定義を削除（インポートした型を使用）
 
 interface SettingsItem {
   label: string;
@@ -59,12 +48,16 @@ interface SettingsProps {
 }
 
 export default function Settings({ userData, onBackToMap }: SettingsProps) {
-  const { signOut } = useAuthContext();
+  const { signOut, updateUserProfile } = useAuthContext();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(() => JSON.parse(localStorage.getItem("darkMode") || "false"));
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showLocation, setShowLocation] = useState(true);
   const [showPaymentMethods, setShowPaymentMethods] = useState(true);
+  const [showPaymentEditModal, setShowPaymentEditModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedUsername, setEditedUsername] = useState(userData?.username || '');
 
   useEffect(() => {
     if (darkMode) {
@@ -84,15 +77,11 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
     }
   };
 
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-
-  const PaymentMethodView = () => setShowPaymentModal(true);
   const ProfileView = () => setShowProfileModal(true);
 
-  // 選択された決済方法をカテゴリ別にグループ化（型を明示的に指定）
-  const getSelectedPaymentMethods = (): Record<string, PaymentMethod[]> => {
-    if (!userData?.selectedMethods) return {};
+  // 選択された決済方法をカテゴリ別にグループ化（型安全な実装）
+  const getSelectedPaymentMethods = (): Record<PaymentCategory, PaymentMethod[]> => {
+    if (!userData?.selectedMethods) return {} as Record<PaymentCategory, PaymentMethod[]>;
     
     const methods: PaymentMethod[] = userData.selectedMethods
       .map(methodId => 
@@ -106,7 +95,7 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
       }
       acc[method.category].push(method);
       return acc;
-    }, {} as Record<string, PaymentMethod[]>);
+    }, {} as Record<PaymentCategory, PaymentMethod[]>);
   };
 
   const selectedMethodsByCategory = getSelectedPaymentMethods();
@@ -123,6 +112,47 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
     return iconMap[iconName as keyof typeof iconMap] || CreditCard;
   };
 
+  const handlePaymentMethodSave = async (selectedMethods: string[]) => {
+    try {
+      // Supabaseのユーザープロフィールを更新
+      const { error } = await updateUserProfile({ selectedMethods });
+      
+      if (error) {
+        console.error('決済方法の更新に失敗:', error);
+        alert('決済方法の更新に失敗しました。');
+      } else {
+        console.log('決済方法を更新しました:', selectedMethods);
+        // 成功メッセージを表示（オプション）
+        alert('決済方法を更新しました。');
+      }
+    } catch (err) {
+      console.error('決済方法の更新エラー:', err);
+      alert('決済方法の更新に失敗しました。');
+    }
+  };
+
+  const handleProfileSave = async () => {
+    try {
+      const { error } = await updateUserProfile({ username: editedUsername });
+      if (error) {
+        console.error('プロフィールの更新に失敗:', error);
+        alert('プロフィールの更新に失敗しました。');
+      } else {
+        console.log('プロフィールを更新しました:', editedUsername);
+        setIsEditingProfile(false);
+        alert('プロフィールを更新しました。');
+      }
+    } catch (err) {
+      console.error('プロフィールの更新エラー:', err);
+      alert('プロフィールの更新に失敗しました。');
+    }
+  };
+
+  const handleProfileCancel = () => {
+    setEditedUsername(userData?.username || '');
+    setIsEditingProfile(false);
+  };
+
   const settingsSections: SettingsSection[] = [
     {
       title: 'アカウント',
@@ -135,9 +165,9 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
           showChevron: true
         },
         {
-          label: '決済方法',
+          label: '決済方法の変更',
           description: `${userData?.selectedMethods.length || 0}個の決済方法`,
-          action: () => PaymentMethodView(), 
+          action: () => setShowPaymentEditModal(true), 
           showChevron: true
         }
       ]
@@ -268,134 +298,16 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
       </div>
 
       {/* 改善された決済方法モーダル */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            
-            {/* ヘッダー */}
-            <div className="px-6 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-500 to-purple-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <CreditCard className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">決済方法</h2>
-                    <p className="text-blue-100 text-sm">
-                      {userData?.selectedMethods?.length || 0}個の決済方法を設定中
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
+      {/* 決済方法編集モーダル */}
+      <PaymentMethodEditModal
+        isOpen={showPaymentEditModal}
+        onClose={() => setShowPaymentEditModal(false)}
+        currentMethods={userData?.selectedMethods || []}
+        onSave={handlePaymentMethodSave}
+        userData={userData}
+      />
 
-            {/* コンテンツ */}
-            <div className="flex-1 overflow-auto px-6 py-6">
-              {Object.keys(selectedMethodsByCategory).length > 0 ? (
-                <div className="space-y-6">
-                  {Object.entries(selectedMethodsByCategory).map(([category, methods]) => {
-                    const categoryInfo = CATEGORY_INFO[category as keyof typeof CATEGORY_INFO];
-                    const CategoryIcon = getCategoryIcon(categoryInfo.icon);
-                    
-                    return (
-                      <div key={category} className="space-y-3">
-                        {/* カテゴリヘッダー */}
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 bg-gradient-to-r ${categoryInfo.color} rounded-lg flex items-center justify-center`}>
-                            <CategoryIcon className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{categoryInfo.name}</h3>
-                            <p className="text-sm text-gray-500">{methods.length}個の決済方法</p>
-                          </div>
-                        </div>
-
-                        {/* 決済方法カード */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {methods.map((method) => (
-                            <div
-                              key={method.id}
-                              className="group relative bg-white border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-all duration-200 hover:border-gray-300"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100">
-                                  <Image
-                                    src={method.icon}
-                                    alt={method.name}
-                                    width={32}
-                                    height={32}
-                                    className="object-contain"
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-gray-900 text-sm truncate">
-                                    {method.name}
-                                  </h4>
-                                  <p className="text-xs text-gray-500 truncate">
-                                    {method.description}
-                                  </p>
-                                </div>
-                              </div>
-                              
-                              {/* ホバー時の編集アイコン */}
-                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                                  <Edit3 className="h-3 w-3 text-gray-600" />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CreditCard className="h-10 w-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    決済方法が設定されていません
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    お好みの決済方法を設定して、<br />
-                    より便利にアプリをご利用ください。
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* フッター */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => console.log("決済方法を追加")}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  <span>決済方法を追加</span>
-                </button>
-                <button
-                  onClick={() => console.log("決済方法を編集")}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                >
-                  <Edit3 className="h-4 w-4" />
-                  <span>編集</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* プロフィールモーダル */}
+      {/* 改善されたプロフィールモーダル */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-11/12 max-w-lg h-5/6 flex flex-col overflow-hidden">
@@ -407,33 +319,158 @@ export default function Settings({ userData, onBackToMap }: SettingsProps) {
                 onClick={() => setShowProfileModal(false)}
                 className="text-white hover:text-gray-200"
               >
-                ✕
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* コンテンツ */}
-            <div className="flex-1 overflow-auto px-6 py-4 space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center text-white text-xl font-bold shadow-md">
+            <div className="flex-1 overflow-auto px-6 py-4 space-y-6">
+              {/* ユーザー情報セクション */}
+              <div className="text-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center text-white text-2xl font-bold shadow-md mx-auto mb-4">
                   {userData?.username?.[0] || "U"}
                 </div>
-                <div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {userData?.username || "ゲストユーザー"}
-                  </p>
-                  <p className="text-sm text-gray-500">{userData?.email || "未登録"}</p>
+                
+                {isEditingProfile ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ユーザー名
+                      </label>
+                      <input
+                        type="text"
+                        value={editedUsername}
+                        onChange={(e) => setEditedUsername(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="ユーザー名を入力"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        メールアドレス
+                      </label>
+                      <input
+                        type="email"
+                        value={userData?.email || ''}
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">メールアドレスは変更できません</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                      {userData?.username || "ゲストユーザー"}
+                    </h3>
+                    <p className="text-sm text-gray-500">{userData?.email || "未登録"}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 決済方法セクション */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2 text-blue-500" />
+                  設定済み決済方法
+                </h4>
+                
+                {Object.keys(selectedMethodsByCategory).length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(selectedMethodsByCategory).map(([category, methods]) => {
+                      // 型安全なアクセス
+                      const categoryKey = category as PaymentCategory;
+                      const categoryInfo = CATEGORY_INFO[categoryKey];
+                      const CategoryIcon = getCategoryIcon(categoryInfo.icon);
+                      
+                      return (
+                        <div key={category} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center mb-3">
+                            <CategoryIcon className="h-5 w-5 mr-2" style={{ color: categoryInfo.color }} />
+                            <h5 className="font-medium text-gray-900">{categoryInfo.name}</h5>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {methods.map((method) => (
+                              <div key={method.id} className="flex items-center space-x-2 bg-white rounded-lg p-2 shadow-sm">
+                                <Image
+                                  src={method.icon}
+                                  alt={method.name}
+                                  width={20}
+                                  height={20}
+                                  className="rounded"
+                                />
+                                <span className="text-sm text-gray-700">{method.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>決済方法が設定されていません</p>
+                    <button
+                      onClick={() => {
+                        setShowProfileModal(false);
+                        setShowPaymentEditModal(true);
+                      }}
+                      className="mt-2 text-blue-500 hover:text-blue-600 text-sm"
+                    >
+                      決済方法を設定する
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* アカウント情報セクション */}
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-3">アカウント情報</h4>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">登録日</span>
+                    <span className="text-sm text-gray-900">2025年1月</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">お気に入り店舗</span>
+                    <span className="text-sm text-gray-900">0件</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">利用回数</span>
+                    <span className="text-sm text-gray-900">0回</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* フッター */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
-              <button
-                onClick={() => console.log("プロフィールを変更")}
-                className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition"
-              >
-                プロフィールを変更
-              </button>
+              {isEditingProfile ? (
+                <>
+                  <button
+                    onClick={handleProfileCancel}
+                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleProfileSave}
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition flex items-center space-x-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>保存</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 transition flex items-center space-x-2"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  <span>プロフィールを変更</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
