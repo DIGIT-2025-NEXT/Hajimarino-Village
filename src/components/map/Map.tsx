@@ -62,7 +62,6 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [favoriteStores, setFavoriteStores] = useState<string[]>([]);
-  const [useRealData, setUseRealData] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [dataSource, setDataSource] = useState<'google' | 'osm' | 'both'>('both');
   
@@ -74,8 +73,8 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
   const [showFavorites, setShowFavorites] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  // カスタムフックを使用して店舗データを取得
-  const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng, useRealData);
+  // カスタムフックを使用して店舗データを取得（常にリアルデータを使用）
+  const { stores, loading, error, refetch } = useStores(CENTER.lat, CENTER.lng);
   
   // テキスト検索フック
   const { searchResults, isSearching, searchError, searchStores } = useStoreSearch(CENTER.lat, CENTER.lng);
@@ -404,32 +403,6 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
             </div>
           )}
 
-          {/* データモード切り替え（検索モードでない場合のみ表示） */}
-          {!isSearchMode && (
-            <div className="flex items-center justify-center">
-              <div className="flex items-center space-x-4 px-4 py-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg">
-                <span className={`text-sm font-medium ${!useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
-                  デモデータ
-                </span>
-                <button
-                  onClick={() => setUseRealData(!useRealData)}
-                  className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  style={{
-                    backgroundColor: useRealData ? '#3B82F6' : '#D1D5DB'
-                  }}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      useRealData ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className={`text-sm font-medium ${useRealData ? 'text-blue-600' : 'text-gray-500'}`}>
-                  リアルデータ
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* フィルター（検索モードでない場合のみ表示） */}

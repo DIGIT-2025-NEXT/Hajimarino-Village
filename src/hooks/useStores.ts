@@ -52,7 +52,7 @@ interface OSMPaymentData {
   tags: Record<string, string>;
 }
 
-export const useStores = (lat: number, lng: number, useRealData: boolean = false) => {
+export const useStores = (lat: number, lng: number) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -279,54 +279,48 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
     setError(null);
     
     try {
-      if (useRealData) {
-        // Google Places APIから実際のデータを取得
-        console.log('Google Places APIから店舗データを取得中...');
-        
-        // 段階的に検索範囲を拡大
-        const searchRadii = [2000, 5000, 10000]; // 2km, 5km, 10km
-        let allPlaces: GooglePlace[] = [];
-        
-        for (const radius of searchRadii) {
-          try {
-            const places = await searchMultipleStoreTypes(lat, lng, radius);
-            allPlaces = [...allPlaces, ...places];
-            
-            // 十分な店舗数が取得できたら停止
-            if (allPlaces.length >= 100) {
-              break;
-            }
-          } catch (error) {
-            console.error(`Error searching with radius ${radius}:`, error);
+      // 常にGoogle Places APIから実際のデータを取得
+      console.log('Google Places APIから店舗データを取得中...');
+      
+      // 段階的に検索範囲を拡大
+      const searchRadii = [2000, 5000, 10000]; // 2km, 5km, 10km
+      let allPlaces: GooglePlace[] = [];
+      
+      for (const radius of searchRadii) {
+        try {
+          const places = await searchMultipleStoreTypes(lat, lng, radius);
+          allPlaces = [...allPlaces, ...places];
+          
+          // 十分な店舗数が取得できたら停止
+          if (allPlaces.length >= 100) {
+            break;
           }
+        } catch (error) {
+          console.error(`Error searching with radius ${radius}:`, error);
         }
-        
-        // 重複を除去
-        const uniquePlaces = allPlaces.filter((place, index, self) => 
-          index === self.findIndex(p => p.place_id === place.place_id)
-        );
-        
-        // 最大100件に制限
-        const limitedPlaces = uniquePlaces.slice(0, 100);
-        
-        // データを変換
-        const convertedStores = await Promise.all(
-          limitedPlaces.map(convertGooglePlaceToStore)
-        );
-        
-        setStores(convertedStores);
-        console.log(`${convertedStores.length}件の店舗データを取得しました`);
-        
-        // OSMデータの取得状況をログ出力
-        if (paymentError) {
-          console.warn('OSM決済方法データの取得に失敗:', paymentError);
-        } else {
-          console.log(`OSM決済方法データ: ${Object.keys(paymentMethods).length}店舗分を取得`);
-        }
+      }
+      
+      // 重複を除去
+      const uniquePlaces = allPlaces.filter((place, index, self) => 
+        index === self.findIndex(p => p.place_id === place.place_id)
+      );
+      
+      // 最大100件に制限
+      const limitedPlaces = uniquePlaces.slice(0, 100);
+      
+      // データを変換
+      const convertedStores = await Promise.all(
+        limitedPlaces.map(convertGooglePlaceToStore)
+      );
+      
+      setStores(convertedStores);
+      console.log(`${convertedStores.length}件の店舗データを取得しました`);
+      
+      // OSMデータの取得状況をログ出力
+      if (paymentError) {
+        console.warn('OSM決済方法データの取得に失敗:', paymentError);
       } else {
-        // サンプルデータを使用
-        setStores(SAMPLE_STORES);
-        console.log('サンプルデータを使用しています');
+        console.log(`OSM決済方法データ: ${Object.keys(paymentMethods).length}店舗分を取得`);
       }
     } catch (error) {
       console.error('店舗データの取得に失敗:', error);
@@ -336,7 +330,7 @@ export const useStores = (lat: number, lng: number, useRealData: boolean = false
     } finally {
       setLoading(false);
     }
-  }, [lat, lng, useRealData, paymentMethods, paymentError]);
+  }, [lat, lng, paymentMethods, paymentError]);
 
   useEffect(() => {
     fetchStores();
