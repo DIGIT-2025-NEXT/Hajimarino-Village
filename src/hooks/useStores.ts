@@ -279,7 +279,14 @@ export const useStores = (lat: number, lng: number) => {
     setError(null);
     
     try {
-      // 常にGoogle Places APIから実際のデータを取得
+      // 開発中はサンプルデータのみを使用（APIコストを防ぐ）
+      if (process.env.NODE_ENV === 'development') {
+        console.log('開発モード: サンプルデータを使用');
+        setStores(SAMPLE_STORES);
+        return;
+      }
+      
+      // 本番環境でのみGoogle Places APIを使用
       console.log('Google Places APIから店舗データを取得中...');
       
       // 段階的に検索範囲を拡大
@@ -292,7 +299,7 @@ export const useStores = (lat: number, lng: number) => {
           allPlaces = [...allPlaces, ...places];
           
           // 十分な店舗数が取得できたら停止
-          if (allPlaces.length >= 100) {
+          if (allPlaces.length >= 20) {
             break;
           }
         } catch (error) {
@@ -305,8 +312,8 @@ export const useStores = (lat: number, lng: number) => {
         index === self.findIndex(p => p.place_id === place.place_id)
       );
       
-      // 最大100件に制限
-      const limitedPlaces = uniquePlaces.slice(0, 100);
+      // 最大20件に制限
+      const limitedPlaces = uniquePlaces.slice(0, 20);
       
       // データを変換
       const convertedStores = await Promise.all(
@@ -325,16 +332,16 @@ export const useStores = (lat: number, lng: number) => {
     } catch (error) {
       console.error('店舗データの取得に失敗:', error);
       setError('店舗データの取得に失敗しました');
-      // エラー時はサンプルデータを使用
       setStores(SAMPLE_STORES);
     } finally {
       setLoading(false);
     }
-  }, [lat, lng, paymentMethods, paymentError]);
+  }, [lat, lng]);
 
+  // 一度だけ実行するように修正
   useEffect(() => {
     fetchStores();
-  }, [fetchStores]);
+  }, [lat, lng]);
 
   return { 
     stores, 

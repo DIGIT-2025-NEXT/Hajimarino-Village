@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Store } from '@/types/store';
 import { useStores } from '@/hooks/useStores';
@@ -11,9 +11,7 @@ import {
   Search, 
   Filter, 
   MapPin, 
-  Store as StoreIcon, 
   User, 
-  Settings as SettingsIcon,
   Heart,
   Layers,
   RefreshCw,
@@ -115,30 +113,34 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
   };
 
   // 表示する店舗データを決定
-  const displayStores = isSearchMode ? searchResults : stores;
+  const displayStores = useMemo(
+    () => (isSearchMode ? searchResults : stores),
+    [isSearchMode, searchResults, stores]
+  );
 
   // 有効な座標を持つ店舗のみをフィルタリング
-  const validStores = displayStores.filter(store => {
-    const isValid = store.latitude && 
-      store.longitude && 
-      typeof store.latitude === 'number' && 
-      typeof store.longitude === 'number' &&
-      !isNaN(store.latitude) &&
-      !isNaN(store.longitude);
-    
-    return isValid;
-  });
+  const validStores = useMemo(() => {
+    return displayStores.filter(store => {
+      const isValid = store.latitude &&
+        store.longitude &&
+        typeof store.latitude === 'number' &&
+        typeof store.longitude === 'number' &&
+        !isNaN(store.latitude) &&
+        !isNaN(store.longitude);
+      return isValid;
+    });
+  }, [displayStores]);
 
-  const filteredStores = validStores.filter(store => {
-    // 検索モードの場合は、テキスト検索結果をそのまま表示
+  const filteredStores = useMemo(() => {
     if (isSearchMode) {
-      return true;
+      return validStores;
     }
-    
-    // 通常モードの場合は、カテゴリフィルターを適用
-    const matchesCategory = selectedCategory === 'all' || store.category === selectedCategory;
-    return matchesCategory;
-  });
+
+    return validStores.filter(store => {
+      const matchesCategory = selectedCategory === 'all' || store.category === selectedCategory;
+      return matchesCategory;
+    });
+  }, [validStores, isSearchMode, selectedCategory]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -161,9 +163,11 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
   };
 
   // お気に入り店舗の詳細情報を取得
-  const favoriteStoreDetails = favoriteStores
-    .map(storeId => stores.find(store => store.id === storeId))
-    .filter((store): store is Store => store !== undefined);
+  const favoriteStoreDetails = useMemo(() => {
+    return favoriteStores
+      .map(storeId => stores.find(store => store.id === storeId))
+      .filter((store): store is Store => store !== undefined);
+  }, [favoriteStores, stores]);
 
   // ゲストユーザーかどうかを判定
   const isGuestUser = userData?.username === 'ゲストユーザー' || !userData?.email;
@@ -204,6 +208,24 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
       onBackToTitle(); // フォールバック
     }
   };
+
+  const markerIcon = useMemo(() => {
+    if (!isLoaded || typeof google === 'undefined') {
+      return undefined;
+    }
+
+    const svg = `
+      <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2"/>
+        <text x="20" y="26" text-anchor="middle" fill="white" font-size="16" font-weight="bold">🏪</text>
+      </svg>
+    `;
+
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new google.maps.Size(40, 40),
+    };
+  }, [isLoaded]);
 
   if (loadError) {
     return (
@@ -260,15 +282,7 @@ export default function Map({ children, userData, onBackToTitle, onGoToLogin }: 
               lng: store.longitude!
             }}
             onClick={() => handleMarkerClick(store)}
-            icon={{
-              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="20" cy="20" r="18" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2"/>
-                  <text x="20" y="26" text-anchor="middle" fill="white" font-size="16" font-weight="bold">🏪</text>
-                </svg>
-              `)}`,
-              scaledSize: new google.maps.Size(40, 40),
-            }}
+            icon={markerIcon}
           />
         ))}
       </GoogleMap>

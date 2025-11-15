@@ -24,80 +24,110 @@ interface PaymentMethodsResponse {
 // 決済方法カテゴリの型定義
 type PaymentCategory = 'qr' | 'nfc' | 'card' | 'ic' | 'cash';
 
+const PAYMENT_CACHE_TTL = 5 * 60 * 1000; // 5分
+
+type PaymentCacheEntry = {
+  data: Record<string, PaymentMethod[]>;
+  timestamp: number;
+};
+
+const paymentCache = new Map<string, PaymentCacheEntry>();
+const paymentCachePromises = new Map<string, Promise<Record<string, PaymentMethod[]>>>();
+
 // OSMの決済方法データを取得するフック
 export const usePaymentMethods = (lat: number, lng: number, radius: number = 1000) => {
   const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethod[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cacheKey = `${lat}_${lng}_${radius}`;
+
   const fetchPaymentMethods = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('Fetching payment methods from OSM...');
-      const response = await fetch(
-        `/api/osm-payment-methods?lat=${lat}&lng=${lng}&radius=${radius}`
-      );
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          console.error('API Error:', errorData);
-          errorMessage += `, message: ${errorData.error || 'Unknown error'}`;
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          errorMessage += ', message: Failed to parse error response';
-        }
-        throw new Error(errorMessage);
+      const cached = paymentCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < PAYMENT_CACHE_TTL) {
+        setPaymentMethods(cached.data);
+        return;
       }
 
-      const data = await response.json() as PaymentMethodsResponse;
-      console.log('OSM API Response:', data);
-      
-      if (data.success) {
-        // 店舗IDをキーとして決済方法をマッピング
-        const paymentMap: Record<string, PaymentMethod[]> = {};
-        
-        data.data.forEach((item: OSMPaymentData) => {
-          const storeId = `${item.type}_${item.id}`;
-          const methods: PaymentMethod[] = item.supportedPayments.map((paymentTag: string) => {
-            // payment:visa -> visa に変換
-            const paymentKey = paymentTag.replace('payment:', '');
-            return {
-              id: paymentKey,
-              name: getPaymentMethodName(paymentKey),
-              icon: getPaymentMethodIcon(paymentKey),
-              isSupported: true,
-              verifiedAt: new Date().toISOString(),
-              category: getPaymentMethodCategory(paymentKey),
-              // 店舗情報を追加
-              storeName: item.name,
-              storeAddress: item.address
-            };
+      let fetchPromise = paymentCachePromises.get(cacheKey);
+      if (!fetchPromise) {
+        fetchPromise = (async () => {
+          console.log('Fetching payment methods from OSM...');
+          const response = await fetch(
+            `/api/osm-payment-methods?lat=${lat}&lng=${lng}&radius=${radius}`
+          );
+
+          console.log('Response status:', response.status);
+
+          if (!response.ok) {
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+              const errorData = await response.json();
+              console.error('API Error:', errorData);
+              errorMessage += `, message: ${errorData.error || 'Unknown error'}`;
+            } catch (parseError) {
+              console.error('Failed to parse error response:', parseError);
+              errorMessage += ', message: Failed to parse error response';
+            }
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json() as PaymentMethodsResponse;
+          console.log('OSM API Response:', data);
+
+          if (!data.success) {
+            console.warn('OSM API returned success: false, using empty data');
+            return {};
+          }
+
+          const paymentMap: Record<string, PaymentMethod[]> = {};
+
+          data.data.forEach((item: OSMPaymentData) => {
+            const storeId = `${item.type}_${item.id}`;
+            const methods: PaymentMethod[] = item.supportedPayments.map((paymentTag: string) => {
+              const paymentKey = paymentTag.replace('payment:', '');
+              return {
+                id: paymentKey,
+                name: getPaymentMethodName(paymentKey),
+                icon: getPaymentMethodIcon(paymentKey),
+                isSupported: true,
+                verifiedAt: new Date().toISOString(),
+                category: getPaymentMethodCategory(paymentKey),
+                storeName: item.name,
+                storeAddress: item.address
+              };
+            });
+
+            paymentMap[storeId] = methods;
           });
-          
-          paymentMap[storeId] = methods;
-        });
-        
-        setPaymentMethods(paymentMap);
-        console.log(`${Object.keys(paymentMap).length}店舗の決済方法データを取得しました`);
-      } else {
-        console.warn('OSM API returned success: false, using empty data');
-        setPaymentMethods({});
+
+          console.log(`${Object.keys(paymentMap).length}店舗の決済方法データを取得しました`);
+          return paymentMap;
+        })();
+
+        paymentCachePromises.set(cacheKey, fetchPromise);
       }
+
+      const paymentMap = await fetchPromise;
+      paymentCache.set(cacheKey, {
+        data: paymentMap,
+        timestamp: Date.now()
+      });
+
+      setPaymentMethods(paymentMap);
     } catch (error) {
       console.error('決済方法データの取得に失敗:', error);
       setError(error instanceof Error ? error.message : 'Unknown error');
-      // エラー時は空のデータを設定
       setPaymentMethods({});
     } finally {
+      paymentCachePromises.delete(cacheKey);
       setLoading(false);
     }
-  }, [lat, lng, radius]);
+  }, [cacheKey, lat, lng, radius]);
 
   useEffect(() => {
     fetchPaymentMethods();

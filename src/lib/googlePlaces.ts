@@ -44,6 +44,14 @@ export interface GooglePlaceDetails {
   }>;
 }
 
+const PLACE_DETAILS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+type PlaceDetailsCacheEntry = {
+  data: GooglePlaceDetails | null;
+  timestamp: number;
+};
+const placeDetailsCache = new Map<string, PlaceDetailsCacheEntry>();
+const placeDetailsPromises = new Map<string, Promise<GooglePlaceDetails | null>>();
+
 // 周辺の店舗を検索（Next.js API Route経由）
 export const searchNearbyStores = async (
   lat: number, 
@@ -111,22 +119,41 @@ export const searchStoresByText = async (
 // 店舗の詳細情報を取得（Next.js API Route経由）
 export const getPlaceDetails = async (placeId: string): Promise<GooglePlaceDetails | null> => {
   try {
-    const response = await fetch(`/api/places/details?place_id=${placeId}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const cached = placeDetailsCache.get(placeId);
+    if (cached && Date.now() - cached.timestamp < PLACE_DETAILS_CACHE_TTL) {
+      return cached.data;
     }
-    
-    const data = await response.json();
-    
-    if (data.status !== 'OK') {
-      throw new Error(`Google Places API error: ${data.status}`);
+
+    let detailPromise = placeDetailsPromises.get(placeId);
+    if (!detailPromise) {
+      detailPromise = (async () => {
+        const response = await fetch(`/api/places/details?place_id=${placeId}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status !== 'OK') {
+          throw new Error(`Google Places API error: ${data.status}`);
+        }
+        
+        return data.result as GooglePlaceDetails;
+      })();
+
+      placeDetailsPromises.set(placeId, detailPromise);
     }
-    
-    return data.result;
+
+    const details = await detailPromise;
+    placeDetailsCache.set(placeId, { data: details, timestamp: Date.now() });
+    return details;
   } catch (error) {
     console.error('Google Places API error:', error);
+    placeDetailsCache.set(placeId, { data: null, timestamp: Date.now() });
     return null;
+  } finally {
+    placeDetailsPromises.delete(placeId);
   }
 };
 

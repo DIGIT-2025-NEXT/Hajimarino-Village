@@ -44,19 +44,58 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // まずは最小限のテストクエリ
-    const bbox = `${parseFloat(lng) - 0.005},${parseFloat(lat) - 0.005},${parseFloat(lng) + 0.005},${parseFloat(lat) + 0.005}`;
+    // より安全なbbox計算
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    const radiusNum = parseFloat(radius);
+    
+    // 座標の有効性をチェック
+    if (isNaN(latNum) || isNaN(lngNum) || isNaN(radiusNum)) {
+      throw new Error('Invalid coordinates or radius');
+    }
+    
+    // 緯度の範囲チェック
+    if (latNum < -90 || latNum > 90) {
+      throw new Error('Latitude must be between -90 and 90');
+    }
+    
+    // 経度の範囲チェック
+    if (lngNum < -180 || lngNum > 180) {
+      throw new Error('Longitude must be between -180 and 180');
+    }
+    
+    // より安全な半径計算（最大5kmに制限）
+    const maxRadius = Math.min(radiusNum, 5000);
+    const latDelta = maxRadius / 111000; // 緯度1度は約111km
+    const lngDelta = maxRadius / (111000 * Math.cos(latNum * Math.PI / 180));
+    
+    // bboxの境界を計算
+    const south = latNum - latDelta;
+    const north = latNum + latDelta;
+    const west = lngNum - lngDelta;
+    const east = lngNum + lngDelta;
+    
+    // 緯度の範囲を-90から90に制限
+    const clampedSouth = Math.max(-90, Math.min(90, south));
+    const clampedNorth = Math.max(-90, Math.min(90, north));
+    
+    // 経度の範囲を-180から180に制限
+    const clampedWest = Math.max(-180, Math.min(180, west));
+    const clampedEast = Math.max(-180, Math.min(180, east));
+    
+    const bbox = `${clampedWest},${clampedSouth},${clampedEast},${clampedNorth}`;
     
     console.log('Using bbox:', bbox);
+    console.log('Original coords:', { lat: latNum, lng: lngNum });
+    console.log('Calculated bounds:', { south: clampedSouth, north: clampedNorth, west: clampedWest, east: clampedEast });
     
-    // 非常にシンプルなOverpass APIクエリ
-    const overpassQuery = `
-[out:json][timeout:10];
+    // より安全で効率的なOverpass APIクエリ
+    const overpassQuery = `[out:json][timeout:15];
 (
-  node["shop"="convenience"](${bbox});
+  node["shop"~"^(convenience|supermarket|restaurant)$"](${bbox});
+  way["shop"~"^(convenience|supermarket|restaurant)$"](${bbox});
 );
-out tags;
-`;
+out center tags;`;
 
     console.log('Sending Overpass query:', overpassQuery);
 
@@ -64,6 +103,7 @@ out tags;
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'PayMapKitaQ/1.0'
       },
       body: `data=${encodeURIComponent(overpassQuery)}`,
     });
@@ -71,16 +111,40 @@ out tags;
     console.log('Overpass API response status:', response.status);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Overpass API error response:', errorText);
-      throw new Error(`Overpass API error! status: ${response.status}, response: ${errorText}`);
+      let errorText = '';
+      try {
+        errorText = await response.text();
+        console.error('Overpass API error response:', errorText);
+      } catch (textError) {
+        console.error('Failed to read error response:', textError);
+        errorText = 'Failed to read error response';
+      }
+      
+      // より詳細なエラー情報を返す
+      return NextResponse.json({
+        success: false,
+        error: `Overpass API error! status: ${response.status}, response: ${errorText}`,
+        data: [],
+        count: 0
+      }, { status: 200 }); // エラーでも200を返してアプリがクラッシュしないように
     }
 
-    const data = await response.json() as OverpassResponse;
-    console.log('Overpass API returned', data.elements?.length || 0, 'elements');
+    let data: OverpassResponse;
+    try {
+      data = await response.json() as OverpassResponse;
+      console.log('Overpass API returned', data.elements?.length || 0, 'elements');
+    } catch (jsonError) {
+      console.error('Failed to parse JSON response:', jsonError);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to parse Overpass API response',
+        data: [],
+        count: 0
+      }, { status: 200 });
+    }
     
     // 決済方法タグを持つ店舗のみをフィルタリング
-    const paymentData: PaymentData[] = data.elements?.filter((element: OSMElement) => {
+    const paymentData: PaymentData[] = (data.elements || []).filter((element: OSMElement) => {
       const tags = element.tags || {};
       return Object.keys(tags).some(tag => tag.startsWith('payment:'));
     }).map((element: OSMElement) => {
@@ -94,17 +158,21 @@ out tags;
         }
       });
       
+      // 座標を取得（nodeの場合は直接、wayの場合はcenter）
+      const elementLat = element.lat || element.center?.lat;
+      const elementLng = element.lon || element.center?.lon;
+      
       return {
         id: element.id,
         type: element.type,
-        lat: element.lat,
-        lng: element.lon,
+        lat: elementLat,
+        lng: elementLng,
         name: tags.name || 'Unknown',
         address: tags['addr:full'] || tags['addr:street'] || '',
         supportedPayments,
         tags
       };
-    }) || [];
+    });
 
     console.log('Processed payment data:', paymentData.length, 'stores with payment methods');
 

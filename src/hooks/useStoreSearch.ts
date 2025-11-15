@@ -287,7 +287,7 @@ export const useStoreSearch = (lat: number, lng: number) => {
     } finally {
       setIsSearching(false);
     }
-  }, [lat, lng, paymentMethods]);
+  }, [lat, lng]); // paymentMethodsを依存配列から削除
 
   return {
     searchResults,
